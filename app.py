@@ -1,6 +1,6 @@
 from flask import Flask
 from extensions import db, bcrypt, jwt
-
+from routes.attendance import attendance_bp
 
 def create_app():
     app = Flask(__name__)
@@ -18,6 +18,9 @@ def create_app():
     # Register Blueprints
     from routes.auth import auth_bp
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    from routes.attendance import attendance_bp
+
+    app.register_blueprint(attendance_bp, url_prefix='/api/attendance')
 
     return app
 
