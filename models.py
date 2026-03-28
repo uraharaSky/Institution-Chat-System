@@ -35,3 +35,17 @@ class NoticeReaction(db.Model):
     notice_id = db.Column(db.Integer)
     user_id = db.Column(db.Integer)
     reaction = db.Column(db.String(20))
+
+class Poll(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    question = db.Column(db.String(200))
+    options = db.Column(db.JSON)  # ["10AM", "2PM"]
+    created_by = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Vote(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    poll_id = db.Column(db.Integer)
+    user_id = db.Column(db.Integer)
+    selected_option = db.Column(db.String(100))

@@ -2,7 +2,7 @@ from flask import Flask
 from extensions import db, bcrypt, jwt
 from routes.attendance import attendance_bp
 from routes.notices import notice_bp
-
+from routes.polls import poll_bp
 
 
 def create_app():
@@ -26,6 +26,8 @@ def create_app():
     app.register_blueprint(attendance_bp, url_prefix='/api/attendance')
 
     app.register_blueprint(notice_bp, url_prefix='/api/notices')
+
+    app.register_blueprint(poll_bp, url_prefix='/api/polls')
 
     return app
 
