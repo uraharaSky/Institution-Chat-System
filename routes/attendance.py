@@ -101,13 +101,13 @@ def mark_attendance():
     data = request.get_json()
     code = data.get("code")
 
-    # 🔍 Find active session
+    # Find active session
     session = Session.query.filter_by(code=code, is_active=True).first()
 
     if not session:
         return jsonify({"msg": "Invalid or expired code"}), 400
 
-    # 🔁 Check duplicate
+    # Check duplicate
     existing = Attendance.query.filter_by(
         session_id=session.id,
         student_id=user_id
@@ -116,7 +116,7 @@ def mark_attendance():
     if existing:
         return jsonify({"msg": "Attendance already marked"}), 400
 
-    # ✅ Mark attendance
+    # Mark attendance
     attendance = Attendance(
         session_id=session.id,
         student_id=user_id
@@ -126,3 +126,20 @@ def mark_attendance():
     db.session.commit()
 
     return jsonify({"msg": "Attendance marked successfully"}), 201
+
+@attendance_bp.route('/my', methods=['GET'])
+@jwt_required()
+def my_attendance():
+    user_id = int(get_jwt_identity())
+
+    # Get all attendance records for this student
+    records = Attendance.query.filter_by(student_id=user_id).all()
+
+    result = []
+    for r in records:
+        result.append({
+            "session_id": r.session_id,
+            "time": r.timestamp
+        })
+
+    return jsonify(result), 200
