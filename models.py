@@ -21,3 +21,17 @@ class Attendance(db.Model):
     session_id = db.Column(db.Integer)
     student_id = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Notice(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200))
+    content = db.Column(db.Text)
+    posted_by = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class NoticeReaction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    notice_id = db.Column(db.Integer)
+    user_id = db.Column(db.Integer)
+    reaction = db.Column(db.String(20))
