@@ -3,7 +3,8 @@ from extensions import db, bcrypt, jwt
 from routes.attendance import attendance_bp
 from routes.notices import notice_bp
 from routes.polls import poll_bp
-
+from routes.admin import admin_bp
+from routes.auth import auth_bp
 
 def create_app():
     app = Flask(__name__)
@@ -19,15 +20,15 @@ def create_app():
     bcrypt.init_app(app)
 
     # Register Blueprints
-    from routes.auth import auth_bp
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    from routes.attendance import attendance_bp
 
     app.register_blueprint(attendance_bp, url_prefix='/api/attendance')
 
     app.register_blueprint(notice_bp, url_prefix='/api/notices')
 
     app.register_blueprint(poll_bp, url_prefix='/api/polls')
+
+    app.register_blueprint(admin_bp, url_prefix='/api/admin')
 
     return app
 
