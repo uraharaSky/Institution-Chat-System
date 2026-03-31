@@ -1,3 +1,4 @@
+import app
 from flask import Flask
 from extensions import db, bcrypt, jwt
 from routes.attendance import attendance_bp
@@ -5,6 +6,7 @@ from routes.notices import notice_bp
 from routes.polls import poll_bp
 from routes.admin import admin_bp
 from routes.auth import auth_bp
+import requests
 
 def create_app():
     app = Flask(__name__)
@@ -13,6 +15,7 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = 'super-secret-key'
+
 
     #initiate extensions
     db.init_app(app)
@@ -30,6 +33,7 @@ def create_app():
 
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
 
+
     return app
 
 
@@ -41,5 +45,4 @@ with app.app_context():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
+    app.run(debug=True, use_reloader=False)

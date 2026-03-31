@@ -95,3 +95,19 @@ def poll_results(poll_id):
         result[v.selected_option] += 1
 
     return jsonify(result), 200
+
+
+@poll_bp.route('/', methods=['GET'])
+@jwt_required()
+def get_polls():
+    polls = Poll.query.all()
+
+    result = []
+    for p in polls:
+        result.append({
+            "id": p.id,
+            "question": p.question,
+            "options": p.options
+        })
+
+    return jsonify(result), 200

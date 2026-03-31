@@ -1,3 +1,5 @@
+import code
+
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import Session, User, Attendance
@@ -52,7 +54,6 @@ def get_attendance(session_id):
 
     #fetch record
     records = Attendance.query.filter_by(session_id=session_id).all()
-    session = Session.query.get(session_id)
 
     result = []
     for r in records:
@@ -121,6 +122,8 @@ def mark_attendance():
         session_id=session.id,
         student_id=user_id
     )
+    print("SESSION ID SAVED:", session.id)
+
 
     db.session.add(attendance)
     db.session.commit()
@@ -143,3 +146,4 @@ def my_attendance():
         })
 
     return jsonify(result), 200
+
