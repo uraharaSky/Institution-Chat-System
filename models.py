@@ -14,6 +14,7 @@ class Session(db.Model):
     code = db.Column(db.String(10))
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    ended_at = db.Column(db.DateTime, nullable=True)
 
 
 class Attendance(db.Model):

@@ -5,6 +5,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import Session, User, Attendance
 from extensions import db
 import random
+from datetime import datetime
 
 attendance_bp = Blueprint('attendance', __name__)
 
@@ -88,13 +89,67 @@ def end_session(session_id):
 
     # End session
     session.is_active = False
+    session.ended_at = datetime.utcnow()
     db.session.commit()
 
     return jsonify({"msg": "Session ended successfully"}), 200
 
 from flask import request
 
+@attendance_bp.route('/live', methods=['GET'])
+@jwt_required()
+def get_live_sessions():
 
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+
+    # Only faculty can view
+    if user.role != "faculty":
+        return jsonify({"msg": "Unauthorized"}), 403
+
+    # 🔥 Only fetch active sessions of this faculty
+    sessions = Session.query.filter_by(
+        faculty_id=user_id,
+        is_active=True
+    ).all()
+
+    data = []
+
+    for s in sessions:
+        data.append({
+            "session_id": s.id,
+            "code": s.code,
+            "start_time": s.created_at.strftime("%H:%M") if hasattr(s, "created_at") else "N/A"
+        })
+
+    return jsonify(data), 200
+
+
+@attendance_bp.route('/past', methods=['GET'])
+@jwt_required()
+def get_past_sessions():
+
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+
+    if user.role != "faculty":
+        return jsonify({"msg": "Unauthorized"}), 403
+
+    sessions = Session.query.filter_by(
+        faculty_id=user_id,
+        is_active=False
+    ).order_by(Session.id.desc()).all()
+
+    data = []
+
+    for s in sessions:
+        data.append({
+            "session_id": s.id,
+            "code": s.code,
+            "ended_at": s.ended_at.strftime("%H:%M") if s.ended_at else "N/A"
+        })
+
+    return jsonify(data), 200
 
 @attendance_bp.route('/mark', methods=['POST'])
 @jwt_required()

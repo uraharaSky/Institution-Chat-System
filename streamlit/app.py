@@ -326,8 +326,10 @@ def faculty_dashboard():
         "Menu",
         [
             "Start Session",
+            "Live Sessions",
             "Live Attendance",
             "Create Notice",
+            "View Notices",
             "Create Poll",
             "View Polls"
         ]
@@ -341,6 +343,109 @@ def faculty_dashboard():
                 headers={"Authorization": f"Bearer {st.session_state['token']}"}
             )
             st.json(res.json())
+
+    # ---------------- LIVE SESSIONS----------------
+    elif menu == "Live Sessions":
+
+        st.subheader("📡 Live Sessions")
+
+        res = requests.get(
+            f"{BASE_URL}/attendance/live",
+            headers={"Authorization": f"Bearer {st.session_state['token']}"}
+        )
+
+        if res.status_code != 200:
+            st.error("Failed to fetch sessions")
+            st.write(res.text)
+            return
+
+        sessions = res.json()
+
+        # ✅ EMPTY STATE
+        if not sessions:
+            st.markdown("""
+            <div style='
+                text-align: center;
+                padding: 30px;
+                border-radius: 12px;
+                background: rgba(255,255,255,0.03);
+                color: #9CA3AF;
+            '>
+                <h4>📡 No Live Sessions</h4>
+                <p>Start a session to begin tracking attendance.</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if st.button("🚀 Start Session", use_container_width=True):
+                res = requests.post(
+                    f"{BASE_URL}/attendance/start",
+                    headers={"Authorization": f"Bearer {st.session_state['token']}"}
+                )
+
+                if res.status_code == 201:
+                    st.success("Session started ✅")
+                    st.rerun()
+
+            return
+
+        # ✅ ACTIVE SESSIONS
+        st.metric("Active Sessions", len(sessions))
+
+        for s in sessions:
+            st.markdown(f"### 🧑‍🏫 Session {s['session_id']}")
+            st.write(f"🔑 Code: {s['code']}")
+            st.write(f"⏱ Started: {s['start_time']}")
+
+            if st.button("❌ End Session", key=f"end_{s['session_id']}"):
+
+                end_res = requests.post(
+                    f"{BASE_URL}/attendance/end/{s['session_id']}",
+                    headers={"Authorization": f"Bearer {st.session_state['token']}"}
+                )
+
+                if end_res.status_code == 200:
+                    st.success("Session ended ✅")
+                    st.rerun()
+                else:
+                    st.error("Failed to end session")
+                    st.write(end_res.text)
+
+            st.divider()
+
+            st.markdown("---")
+
+        #Past sessions
+        st.markdown("## 📜 Past Sessions")
+
+        res = requests.get(
+            f"{BASE_URL}/attendance/past",
+            headers={"Authorization": f"Bearer {st.session_state['token']}"}
+        )
+
+        if res.status_code != 200:
+            st.error("Failed to fetch past sessions")
+            st.write(res.text)
+        else:
+            past_sessions = res.json()
+
+            if not past_sessions:
+                st.markdown("""
+                <div style='
+                    padding: 20px;
+                    border-radius: 10px;
+                    background: rgba(255,255,255,0.02);
+                    color: #9CA3AF;
+                '>
+                    No past sessions yet
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                for s in past_sessions:
+                    st.markdown(f"### 🧑‍🏫 Session {s['session_id']}")
+                    st.write(f"🔑 Code: {s['code']}")
+                    st.write(f"⏹ Ended at: {s['ended_at']}")
+
+                    st.divider()
 
     # ---------------- LIVE ATTENDANCE ----------------
     elif menu == "Live Attendance":
@@ -377,6 +482,9 @@ def faculty_dashboard():
                 headers={"Authorization": f"Bearer {st.session_state['token']}"}
             )
             st.success("Notice posted ✅")
+
+    # ---------------- VIEW NOTICE ----------------
+
 
     # ---------------- CREATE POLL ----------------
     elif menu == "Create Poll":
