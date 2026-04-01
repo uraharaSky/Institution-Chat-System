@@ -94,6 +94,8 @@ def end_session(session_id):
 
 from flask import request
 
+
+
 @attendance_bp.route('/mark', methods=['POST'])
 @jwt_required()
 def mark_attendance():

@@ -21,116 +21,197 @@ if "page" not in st.session_state:
     st.session_state["page"] = "welcome"
 
 # ---------------- WELCOME PAGE ----------------
-# def welcome_page():
-#     st.markdown("<h1>🎓 Institution System</h1>", unsafe_allow_html=True)
-#     st.markdown("<div class='subtitle'>Seamless communication between students & admins</div>", unsafe_allow_html=True)
-#
-#     col1, col2 = st.columns(2)
-#
-#     with col1:
-#         if st.button("🔐 Login", key="login_btn", use_container_width=True):
-#             st.session_state.page = "login"
-#             st.rerun()
-#
-#     with col2:
-#         if st.button("📝 Register", key="register_btn", use_container_width=True):
-#             st.session_state.page = "register"
-#             st.rerun()
 
-# ---------------- STYLING ----------------
-# st.markdown("""
-# <style>
-#     .main {
-#         background-color: #0E1117;
-#     }
-#     .block-container {
-#         padding-top: 6rem;
-#     }
-# </style>
-# """, unsafe_allow_html=True)
+def auth_layout():
 
-st.markdown("""
-<style>
+    st.markdown("""
+    <style>
 
-/* Background */
-.main {
-    background-color: #0E1117;
-}
+    .block-container {
+        padding-top: 10rem;
+    }
 
-/* Container */
-.block-container {
-    padding-top: 4rem;
-    max-width: 1000px;
-}
+    .glow-container {
+        position: relative;
+        display: inline-block;
+    }
 
-/* Title */
-h1 {
-    text-align: center;
-    font-weight: 700;
-    font-size: 48px;
-}
+    .glow-container::before {
+        content: "";
+        position: absolute;
+        top: -30px;
+        left: -50px;
+        width: 140%;
+        height: 180%;
+        background: radial-gradient(circle, rgba(139,92,246,0.35), transparent 70%);
+        filter: blur(50px);
+        z-index: -1;
+    }
+    
+        /* Buttons */
+    .stButton>button {
+        width: 100%;
+        height: 55px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        border: none;
+        color: white;
+        background: linear-gradient(90deg, #6366F1, #22D3EE);
+        transition: all 0.25s ease;
+    }
 
-/* Subtitle */
-.subtitle {
-    text-align: center;
-    color: #9CA3AF;
-    font-size: 18px;
-    margin-bottom: 2rem;
-}
+    .stButton>button:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0px 8px 20px rgba(99,102,241,0.3);
+    }
 
-/* Buttons */
-.stButton>button {
-    width: 100%;
-    height: 50px;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: 600;
-    border: none;
-    color: white;
-    background: linear-gradient(90deg, #6366F1, #22D3EE);
-    transition: all 0.25s ease;
+    
+    .brand-title {
+        font-size: 64px;
+        font-weight: 800;
+        background: linear-gradient(90deg, #8B5CF6, #6366F1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
 
-}
+    .brand-sub {
+        font-size: 20px;
+        color: #9CA3AF;
+        margin-top: 10px;
+    }
 
-.stButton>button:hover {
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0px 8px 20px rgba(99,102,241,0.3);
-}
-
-</style>
-""", unsafe_allow_html=True)
+    .divider {
+        border-left: 2px solid rgba(255,255,255,0.1);
+        height: 300px;
+        margin: auto;
+    }
+    
 
 
-# # 🔥 CARD START
-# st.markdown("""
-# <div style='
-#     padding: 40px;
-#     border-radius: 20px;
-#     background: rgba(255,255,255,0.03);
-#     backdrop-filter: blur(10px);
-# '>
-# """, unsafe_allow_html=True)
 
+    /* Right panel scroll */
+    .scroll-box {
+       
+    overflow-y: auto;
+    padding-right: 10px;
+    }
 
-# 👉 THIS is "your content"
-# st.markdown("<h1>🎓 Institution System</h1>", unsafe_allow_html=True)
-# st.markdown("<div class='subtitle'>Seamless communication between students & admins</div>", unsafe_allow_html=True)
-#
-#
-# col1, col2 = st.columns(2)
-#
-# with col1:
-#     st.button("🔐 Login", key="login_btn", use_container_width=True)
-#
-# with col2:
-#     st.button("📝 Register", key="register_btn", use_container_width=True)
-# 🔥 CARD END
-# st.markdown("</div>", unsafe_allow_html=True)
+    /* Optional: nice scrollbar */
+    .scroll-box::-webkit-scrollbar {
+        width: 6px;
+    }
+    .scroll-box::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    }
+    
+    /* Align columns vertically center */
+    div[data-testid="column"] {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+          </style>
+          """, unsafe_allow_html=True)
 
+    col1, col2, col3 = st.columns([2, 0.1, 1])
 
+    # ---------------- LEFT (STATIC) ----------------
+    with col1:
+        st.markdown("""
+        <div class="glow-container">
+            <div class="brand-title">UniConnect</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("<div class='brand-sub'>Institution Chat System</div>", unsafe_allow_html=True)
+
+    # ---------------- DIVIDER ----------------
+    with col2:
+        st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
+
+    # ---------------- RIGHT (DYNAMIC) ----------------
+    with col3:
+
+        # 👇 START SCROLL AREA
+        st.markdown("<div class='scroll-box'>", unsafe_allow_html=True)
+
+        page = st.session_state.page
+
+        if page == "welcome":
+            if st.button("Login", key="main_login", use_container_width=True):
+                st.session_state.page = "login"
+                st.rerun()
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            if st.button("Register", key="main_register", use_container_width=True):
+                st.session_state.page = "register"
+                st.rerun()
+
+        elif page == "login":
+            st.markdown("### Login")
+
+            email = st.text_input("Email", key="login_email")
+            password = st.text_input("Password", type="password", key="login_pass")
+
+            if st.button("Login", key="login_btn", use_container_width=True):
+                res = requests.post(f"{BASE_URL}/auth/login", json={
+                    "email": email,
+                    "password": password
+                })
+
+                if res.status_code == 200:
+                    data = res.json()
+                    st.session_state["token"] = data["token"]
+                    st.session_state["role"] = data["user"]["role"]
+                    st.success("Login successful ✅")
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials ❌")
+
+            if st.button("⬅ Back", key="login_back"):
+                st.session_state.page = "welcome"
+                st.rerun()
+
+        elif page == "register":
+            st.markdown("### 📝 Register")
+
+            name = st.text_input("Name", key="reg_name")
+            email = st.text_input("Email", key="reg_email")
+            password = st.text_input("Password", type="password", key="reg_pass")
+
+            admin_mode = st.toggle("🔐 Register as Admin")
+
+            if admin_mode:
+                role = "admin"
+            else:
+                role = st.selectbox("Select Role", ["student", "faculty", "cr"])
+
+            if st.button("Register", key="register_btn", use_container_width=True):
+                res = requests.post(f"{BASE_URL}/auth/register", json={
+                    "name": name,
+                    "email": email,
+                    "password": password,
+                    "role": role
+                })
+
+                if res.status_code == 201:
+                    st.success("Registered successfully ✅")
+                else:
+                    st.error("Registration failed ❌")
+                    st.write(res.text)
+
+            if st.button("⬅ Back", key="register_back"):
+                st.session_state.page = "welcome"
+                st.rerun()
+
+        # 👇 END SCROLL AREA
+        st.markdown("</div>", unsafe_allow_html=True)
 # ---------------- SIDEBAR ----------------
 def sidebar():
-    st.sidebar.markdown("## 🎓 Navigation")
     role = st.session_state.get("role", "")
     st.sidebar.markdown(f"👤 **Role:** {role}")
     st.sidebar.markdown("---")
@@ -139,66 +220,6 @@ def sidebar():
         st.session_state.clear()
         st.rerun()
 
-# ---------------- LOGIN ----------------
-def login_page():
-    st.title("🔐 Login")
-
-    email = st.text_input("Email")
-    password = st.text_input("Password", type="password")
-
-    if st.button("Login", key="login_btn"):
-        res = requests.post(f"{BASE_URL}/auth/login", json={
-            "email": email,
-            "password": password
-        })
-
-        if res.status_code == 200:
-            data = res.json()
-            st.session_state["token"] = data["token"]
-            st.session_state["role"] = data["user"]["role"]
-            st.success("Login successful ✅")
-            st.rerun()
-        else:
-            st.error("Invalid credentials ❌")
-
-    if st.button("⬅ Back", key="login_back"):
-        st.session_state.page = "welcome"
-        st.rerun()
-
-# ---------------- REGISTER ----------------
-def register_page():
-    st.title("📝 Register")
-
-    name = st.text_input("Name")
-    email = st.text_input("Email")
-    password = st.text_input("Password", type="password")
-
-    # 🔐 Admin toggle
-    admin_mode = st.toggle("🔐 Register as Admin")
-
-    if admin_mode:
-        role = "admin"
-        st.info("Admin mode enabled 👑")
-    else:
-        role = st.selectbox("Select Role", ["student", "faculty", "cr"])
-
-    if st.button("Register", key="register_btn"):
-        res = requests.post(f"{BASE_URL}/auth/register", json={
-            "name": name,
-            "email": email,
-            "password": password,
-            "role": role
-        })
-
-        if res.status_code == 201:
-            st.success("Registered successfully ✅")
-        else:
-            st.error("Registration failed ❌")
-            st.write(res.text)
-
-    if st.button("⬅ Back", key="register_back"):
-        st.session_state.page = "welcome"
-        st.rerun()
 
 # ---------------- STUDENT DASHBOARD ----------------
 def student_dashboard():
@@ -489,20 +510,8 @@ def admin_dashboard():
         st.pyplot(fig)
 # ---------------- ROUTER ----------------
 if not st.session_state["token"]:
-    st.title("🎓 Institution Chat System")
+    auth_layout()
 
-
-    if st.button("Login", key="main_login"):
-        st.session_state.page = "login"
-
-    if st.button("Register", key="main_register"):
-        st.session_state.page = "register"
-
-    if st.session_state.page == "login":
-        login_page()
-
-    elif st.session_state.page == "register":
-        register_page()
 
 else:
     role = st.session_state["role"]
