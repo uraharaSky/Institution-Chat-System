@@ -8,28 +8,28 @@ admin_bp = Blueprint('admin', __name__)
 def is_admin(user):
     return user.role == "admin"
 #
-# @admin_bp.route('/users', methods=['GET'])
-# @jwt_required()
-# def get_users():
-#     user_id = int(get_jwt_identity())
-#     user = User.query.get(user_id)
-#
-#     if not is_admin(user):
-#         return jsonify({"msg": "Admin only"}), 403
-#
-#     users = User.query.all()
-#
-#     result = []
-#     for u in users:
-#         result.append({
-#             "id": u.id,
-#             "name": u.name,
-#             "email": u.email,
-#             "role": u.role
-#         })
-#
-#     return jsonify(result), 200
-#
+@admin_bp.route('/users', methods=['GET'])
+@jwt_required()
+def get_users():
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+
+    if not is_admin(user):
+        return jsonify({"msg": "Admin only"}), 403
+
+    users = User.query.all()
+
+    result = []
+    for u in users:
+        result.append({
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "role": u.role
+        })
+
+    return jsonify(result), 200
+
 #
 # @admin_bp.route('/attendance-report', methods=['GET'])
 # @jwt_required()
@@ -94,11 +94,11 @@ def system_summary():
     total_polls = Poll.query.count()
 
     summary = {
-        "total_users": total_users,
-        "total_sessions": total_sessions,
-        "total_attendance": Attendance.query.count(),
-        "total_notices": total_notices,
-        "total_polls": total_polls
+        "Total Users": total_users,
+        "Total Sessions": total_sessions,
+        "Total Attendance": Attendance.query.count(),
+        "Total Notices": total_notices,
+        "Total Polls": total_polls
     }
 
     return jsonify(summary), 200

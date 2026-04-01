@@ -5,7 +5,7 @@ import requests
 BASE_URL = "http://127.0.0.1:5000/api"
 
 st.set_page_config(
-    page_title="Institution System",
+    page_title="Institution Chat System",
     page_icon="🎓",
     layout="wide"
 )
@@ -20,17 +20,113 @@ if "role" not in st.session_state:
 if "page" not in st.session_state:
     st.session_state["page"] = "welcome"
 
+# ---------------- WELCOME PAGE ----------------
+# def welcome_page():
+#     st.markdown("<h1>🎓 Institution System</h1>", unsafe_allow_html=True)
+#     st.markdown("<div class='subtitle'>Seamless communication between students & admins</div>", unsafe_allow_html=True)
+#
+#     col1, col2 = st.columns(2)
+#
+#     with col1:
+#         if st.button("🔐 Login", key="login_btn", use_container_width=True):
+#             st.session_state.page = "login"
+#             st.rerun()
+#
+#     with col2:
+#         if st.button("📝 Register", key="register_btn", use_container_width=True):
+#             st.session_state.page = "register"
+#             st.rerun()
+
 # ---------------- STYLING ----------------
+# st.markdown("""
+# <style>
+#     .main {
+#         background-color: #0E1117;
+#     }
+#     .block-container {
+#         padding-top: 6rem;
+#     }
+# </style>
+# """, unsafe_allow_html=True)
+
 st.markdown("""
 <style>
-    .main {
-        background-color: #0E1117;
-    }
-    .block-container {
-        padding-top: 6rem;
-    }
+
+/* Background */
+.main {
+    background-color: #0E1117;
+}
+
+/* Container */
+.block-container {
+    padding-top: 4rem;
+    max-width: 1000px;
+}
+
+/* Title */
+h1 {
+    text-align: center;
+    font-weight: 700;
+    font-size: 48px;
+}
+
+/* Subtitle */
+.subtitle {
+    text-align: center;
+    color: #9CA3AF;
+    font-size: 18px;
+    margin-bottom: 2rem;
+}
+
+/* Buttons */
+.stButton>button {
+    width: 100%;
+    height: 50px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    color: white;
+    background: linear-gradient(90deg, #6366F1, #22D3EE);
+    transition: all 0.25s ease;
+
+}
+
+.stButton>button:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0px 8px 20px rgba(99,102,241,0.3);
+}
+
 </style>
 """, unsafe_allow_html=True)
+
+
+# # 🔥 CARD START
+# st.markdown("""
+# <div style='
+#     padding: 40px;
+#     border-radius: 20px;
+#     background: rgba(255,255,255,0.03);
+#     backdrop-filter: blur(10px);
+# '>
+# """, unsafe_allow_html=True)
+
+
+# 👉 THIS is "your content"
+# st.markdown("<h1>🎓 Institution System</h1>", unsafe_allow_html=True)
+# st.markdown("<div class='subtitle'>Seamless communication between students & admins</div>", unsafe_allow_html=True)
+#
+#
+# col1, col2 = st.columns(2)
+#
+# with col1:
+#     st.button("🔐 Login", key="login_btn", use_container_width=True)
+#
+# with col2:
+#     st.button("📝 Register", key="register_btn", use_container_width=True)
+# 🔥 CARD END
+# st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ---------------- SIDEBAR ----------------
 def sidebar():
@@ -326,7 +422,14 @@ def admin_dashboard():
             f"{BASE_URL}/admin/users",
             headers={"Authorization": f"Bearer {st.session_state['token']}"}
         )
-        st.table(res.json())
+        if res.status_code != 200:
+            st.error("API Failed ❌")
+            st.write("Status Code:", res.status_code)
+            st.write("Response:", res.text)
+            return
+
+        data = res.json()
+        st.table(data)
 
     # ---------------- SUMMARY ----------------
     elif menu == "Summary":
@@ -351,21 +454,21 @@ def admin_dashboard():
         col1, col2, col3 = st.columns(3)
         col4, col5 = st.columns(2)
 
-        col1.metric("👥 Users", data["total_users"])
-        col2.metric("📚 Sessions", data["total_sessions"])
-        col3.metric("✅ Attendance", data["total_attendance"])
-        col4.metric("📢 Notices", data["total_notices"])
-        col5.metric("🗳️ Polls", data["total_polls"])
+        col1.metric("👥 Users", data["Total Users"])
+        col2.metric("📚 Sessions", data["Total Sessions"])
+        col3.metric("✅ Attendance", data["Total Attendance"])
+        col4.metric("📢 Notices", data["Total Notices"])
+        col5.metric("🗳️ Polls", data["Total Polls"])
 
         st.divider()
 
         # 🔥 BAR CHART
         chart_data = {
-            "Users": data["total_users"],
-            "Sessions": data["total_sessions"],
-            "Attendance": data["total_attendance"],
-            "Notices": data["total_notices"],
-            "Polls": data["total_polls"]
+            "Users": data["Total Users"],
+            "Sessions": data["Total Sessions"],
+            "Attendance": data["Total Attendance"],
+            "Notices": data["Total Notices"],
+            "Polls": data["Total Polls"]
         }
 
         st.markdown("### 📊 Overview Chart")
@@ -386,7 +489,8 @@ def admin_dashboard():
         st.pyplot(fig)
 # ---------------- ROUTER ----------------
 if not st.session_state["token"]:
-    st.title("🎓 Institution System")
+    st.title("🎓 Institution Chat System")
+
 
     if st.button("Login", key="main_login"):
         st.session_state.page = "login"
