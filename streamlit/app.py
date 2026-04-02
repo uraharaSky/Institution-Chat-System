@@ -648,25 +648,25 @@ def faculty_dashboard():
                     key=f"poll_{p['id']}"
                 )
 
-            👇 Vote button
-            if st.button("Vote", key=f"vote_{p['id']}", use_container_width=True):
-
-                payload = {
-                    "options": selected if isinstance(selected, list) else [selected]
-                }
-
-                vote_res = requests.post(
-                    f"{BASE_URL}/polls/{p['id']}/vote",
-                    json=payload,
-                    headers={"Authorization": f"Bearer {st.session_state['token']}"}
-                )
-
-                if vote_res.status_code == 200:
-                    st.success("Vote recorded ✅")
-                    st.rerun()
-                else:
-                    st.error("Failed to vote")
-                    st.write(vote_res.text)
+            # 👇 Vote button
+            # if st.button("Vote", key=f"vote_{p['id']}", use_container_width=True):
+            #
+            #     payload = {
+            #         "options": selected if isinstance(selected, list) else [selected]
+            #     }
+            #
+            #     vote_res = requests.post(
+            #         f"{BASE_URL}/polls/{p['id']}/vote",
+            #         json=payload,
+            #         headers={"Authorization": f"Bearer {st.session_state['token']}"}
+            #     )
+            #
+            #     if vote_res.status_code == 200:
+            #         st.success("Vote recorded ✅")
+            #         st.rerun()
+            #     else:
+            #         st.error("Failed to vote")
+            #         st.write(vote_res.text)
 
             # 👇 RESULTS
             result_res = requests.get(
