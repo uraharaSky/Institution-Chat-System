@@ -299,16 +299,25 @@ def student_dashboard():
         for p in res.json():
             st.subheader(p["question"])
 
-            choice = st.radio(
-                "Choose option",
-                p["options"],
-                key=f"poll_{p['id']}"
-            )
+            if p.get("multi_select"):
+                choice = st.multiselect(
+                    "Select options",
+                    p["options"],
+                    key=f"poll_{p['id']}"
+                )
+            else:
+                choice = st.radio(
+                    "Choose option",
+                    p["options"],
+                    key=f"poll_{p['id']}"
+                )
 
             if st.button("Vote", key=f"vote_{p['id']}"):
                 requests.post(
                     f"{BASE_URL}/polls/{p['id']}/vote",
-                    json={"option": choice},
+                    json={
+                        "options": choice if isinstance(choice, list) else [choice]
+                    },
                     headers={"Authorization": f"Bearer {st.session_state['token']}"}
                 )
                 st.success("Voted ✅")
@@ -326,7 +335,7 @@ def faculty_dashboard():
         "Menu",
         [
             "Start Session",
-            "Live Sessions",
+            "Sessions",
             "Live Attendance",
             "Create Notice",
             "View Notices",
@@ -345,7 +354,7 @@ def faculty_dashboard():
             st.json(res.json())
 
     # ---------------- LIVE SESSIONS----------------
-    elif menu == "Live Sessions":
+    elif menu == "Sessions":
 
         st.subheader("📡 Live Sessions")
 
@@ -484,55 +493,206 @@ def faculty_dashboard():
             st.success("Notice posted ✅")
 
     # ---------------- VIEW NOTICE ----------------
+    elif menu == "View Notices":
 
+        st.subheader("📢 Notices")
+
+        res = requests.get(
+            f"{BASE_URL}/notices/",
+            headers={"Authorization": f"Bearer {st.session_state['token']}"}
+        )
+
+        if res.status_code != 200:
+            st.error("Failed to fetch notices")
+            st.write(res.text)
+            return
+
+        notices = res.json()
+
+        if not notices:
+            st.info("No notices available")
+            return
+
+        for n in notices:
+
+            # 🔥 NOTICE CARD
+            st.markdown(f"""
+            <div style='
+                padding: 20px;
+                border-radius: 12px;
+                background: rgba(255,255,255,0.03);
+                margin-bottom: 15px;
+            '>
+                <h4>{n['title']}</h4>
+                <p>{n['content']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # 🔢 Reaction counts
+            reactions = n.get("reactions", {})
+
+            col1, col2, col3 = st.columns(3)
+
+            col1.metric("👍 Likes", reactions.get("👍", 0))
+            col2.metric("❤️ Love", reactions.get("❤️", 0))
+            col3.metric("👀 Views", reactions.get("👀", 0))
+
+            # 🎯 Reaction buttons
+            col1, col2, col3 = st.columns(3)
+
+            if col1.button("👍", key=f"like_{n['id']}"):
+                requests.post(
+                    f"{BASE_URL}/notices/{n['id']}/react",
+                    json={"reaction": "👍"},
+                    headers={"Authorization": f"Bearer {st.session_state['token']}"}
+                )
+                st.rerun()
+
+            if col2.button("❤️", key=f"love_{n['id']}"):
+                requests.post(
+                    f"{BASE_URL}/notices/{n['id']}/react",
+                    json={"reaction": "❤️"},
+                    headers={"Authorization": f"Bearer {st.session_state['token']}"}
+                )
+                st.rerun()
+
+            if col3.button("👀", key=f"view_{n['id']}"):
+                requests.post(
+                    f"{BASE_URL}/notices/{n['id']}/react",
+                    json={"reaction": "👀"},
+                    headers={"Authorization": f"Bearer {st.session_state['token']}"}
+                )
+                st.rerun()
+
+            st.divider()
 
     # ---------------- CREATE POLL ----------------
     elif menu == "Create Poll":
         question = st.text_input("Poll Question")
-        options = st.text_area("Options (comma separated)")
+    options = st.text_area("Options (comma separated)")
 
-        if st.button("Create Poll", key="create_poll_faculty"):
-            if not question or not options:
-                st.warning("Fill all fields")
-                return
+    multi_select = st.toggle("Allow multiple selections")
 
-            option_list = [opt.strip() for opt in options.split(",")]
+    if st.button("Create Poll", key="create_poll_faculty"):
+        if not question or not options:
+            st.warning("Fill all fields")
+            return
 
-            res = requests.post(
-                f"{BASE_URL}/polls/",
-                json={
-                    "question": question,
-                    "options": option_list
-                },
-                headers={"Authorization": f"Bearer {st.session_state['token']}"}
-            )
+        option_list = [opt.strip() for opt in options.split(",")]
 
-            st.success("Poll created ✅")
+        res = requests.post(
+            f"{BASE_URL}/polls/",
+            json={
+                "question": question,
+                "options": option_list,
+                "multi_select": multi_select   # 👈 NEW
+            },
+            headers={"Authorization": f"Bearer {st.session_state['token']}"}
+        )
+
+        st.success("Poll created ✅")
 
     # ---------------- VIEW POLLS ----------------
     elif menu == "View Polls":
+
         res = requests.get(
             f"{BASE_URL}/polls/",
             headers={"Authorization": f"Bearer {st.session_state['token']}"}
         )
 
-        polls = res.json()
+        if res.status_code != 200:
+            st.error("Failed to fetch polls")
+            st.write(res.text)
+            return
+
+        try:
+            polls = res.json()
+        except:
+            st.error("Invalid server response")
+            st.write(res.text)
+            return
 
         if not polls:
-            st.info("No polls available")
+            st.markdown("""
+            <div style='text-align:center; padding:30px; color:#9CA3AF'>
+                <h4>No polls available</h4>
+            </div>
+            """, unsafe_allow_html=True)
             return
 
         for p in polls:
-            st.subheader(f"📊 {p['question']}")
 
+            # 🔥 POLL CARD START
+            st.markdown("""
+            <div style='
+                padding: 20px;
+                border-radius: 14px;
+                background: rgba(255,255,255,0.03);
+                margin-bottom: 20px;
+            '>
+            """, unsafe_allow_html=True)
+
+            st.markdown(f"### 📊 {p['question']}")
+
+            # 👇 Input type
+            if p.get("multi_select"):
+                selected = st.multiselect(
+                    "Select options",
+                    p["options"],
+                    key=f"poll_{p['id']}"
+                )
+            else:
+                selected = st.radio(
+                    "Choose option",
+                    p["options"],
+                    key=f"poll_{p['id']}"
+                )
+
+            # 👇 Vote button
+            # if st.button("Vote", key=f"vote_{p['id']}", use_container_width=True):
+            #
+            #     payload = {
+            #         "options": selected if isinstance(selected, list) else [selected]
+            #     }
+            #
+            #     vote_res = requests.post(
+            #         f"{BASE_URL}/polls/{p['id']}/vote",
+            #         json=payload,
+            #         headers={"Authorization": f"Bearer {st.session_state['token']}"}
+            #     )
+            #
+            #     if vote_res.status_code == 200:
+            #         st.success("Vote recorded ✅")
+            #         st.rerun()
+            #     else:
+            #         st.error("Failed to vote")
+            #         st.write(vote_res.text)
+
+            # 👇 RESULTS
             result_res = requests.get(
                 f"{BASE_URL}/polls/{p['id']}/results",
                 headers={"Authorization": f"Bearer {st.session_state['token']}"}
             )
 
-            st.json(result_res.json())
-            st.divider()
+            if result_res.status_code == 200:
+                results = result_res.json()
 
+                if results:
+                    st.markdown("#### 📈 Results")
+
+                    total_votes = sum(results.values())
+
+                    for opt, count in results.items():
+                        percentage = (count / total_votes * 100) if total_votes > 0 else 0
+
+                        st.markdown(f"**{opt}** — {count} votes ({percentage:.1f}%)")
+                        st.progress(percentage / 100)
+
+            else:
+                st.warning("Could not load results")
+
+            # 🔥 POLL CARD END
+            st.markdown("</div>", unsafe_allow_html=True)
 # ---------------- ADMIN ----------------
 def admin_dashboard():
     sidebar()

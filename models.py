@@ -1,5 +1,6 @@
 from extensions import db
 from datetime import datetime
+import json
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -41,7 +42,7 @@ class Poll(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     question = db.Column(db.String(200))
     options = db.Column(db.JSON)  # ["10AM", "2PM"]
-    created_by = db.Column(db.Integer)
+    created_by = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
@@ -49,4 +50,4 @@ class Vote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     poll_id = db.Column(db.Integer)
     user_id = db.Column(db.Integer)
-    selected_option = db.Column(db.String(100))
+    selected_options = db.Column(db.Text)
