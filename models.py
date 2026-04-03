@@ -52,3 +52,13 @@ class Vote(db.Model):
     poll_id = db.Column(db.Integer)
     user_id = db.Column(db.Integer)
     selected_options = db.Column(db.Text)
+
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    receiver_id = db.Column(db.Integer)
+    chat_id = db.Column(db.String(50))  # 👈 important
+    content = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default="sent")  # sent/delivered/read

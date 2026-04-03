@@ -2,6 +2,7 @@ import app
 from flask import Flask
 from extensions import db, bcrypt, jwt
 from routes.attendance import attendance_bp
+from routes.chats import chat_bp
 from routes.notices import notice_bp
 from routes.polls import poll_bp
 from routes.admin import admin_bp
@@ -32,6 +33,8 @@ def create_app():
     app.register_blueprint(poll_bp, url_prefix='/api/polls')
 
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
+
+    app.register_blueprint(chat_bp, url_prefix="/chat")
 
 
     return app
