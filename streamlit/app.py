@@ -323,6 +323,151 @@ def student_dashboard():
                 st.success("Voted ✅")
                 st.rerun()
 
+
+# ---------------- CR DASHBOARD ----------------
+def cr_dashboard():
+    sidebar()
+
+    st.markdown("## 👨‍🎓 Class Representative Dashboard")
+    st.divider()
+
+    menu = st.sidebar.selectbox(
+        "Menu",
+        ["Mark Attendance", "My Attendance", "Create Notice","View Notices","Create Poll", "View Polls"]
+    )
+
+    # MARK ATTENDANCE
+    if menu == "Mark Attendance":
+        code = st.text_input("Enter Code")
+
+        if st.button("Mark", key="mark_btn"):
+            res = requests.post(
+                f"{BASE_URL}/attendance/mark",
+                json={"code": code},
+                headers={"Authorization": f"Bearer {st.session_state['token']}"}
+            )
+            st.json(res.json())
+
+    # MY ATTENDANCE
+    elif menu == "My Attendance":
+        res = requests.get(
+            f"{BASE_URL}/attendance/my",
+            headers={"Authorization": f"Bearer {st.session_state['token']}"}
+        )
+
+        data = res.json()
+
+        if not data:
+            st.info("No attendance records")
+        else:
+            st.table(data)
+
+    # NOTICES
+
+    # ---------------- CREATE NOTICE ----------------
+    elif menu == "Create Notice":
+        title = st.text_input("Title")
+        content = st.text_area("Content")
+
+        if st.button("Post Notice", key="post_notice"):
+            res = requests.post(
+                f"{BASE_URL}/notices/",
+                json={"title": title, "content": content},
+                headers={"Authorization": f"Bearer {st.session_state['token']}"}
+            )
+            st.success("Notice posted ✅")
+
+    elif menu == "View Notices":
+        res = requests.get(
+            f"{BASE_URL}/notices/",
+            headers={"Authorization": f"Bearer {st.session_state['token']}"}
+        )
+
+        for n in res.json():
+            st.subheader(n["title"])
+            st.write(n["content"])
+
+            col1, col2, col3 = st.columns(3)
+
+            if col1.button("👍", key=f"like_{n['id']}"):
+                requests.post(f"{BASE_URL}/notices/{n['id']}/react",
+                              json={"reaction": "👍"},
+                              headers={"Authorization": f"Bearer {st.session_state['token']}"})
+
+            if col2.button("❤️", key=f"love_{n['id']}"):
+                requests.post(f"{BASE_URL}/notices/{n['id']}/react",
+                              json={"reaction": "❤️"},
+                              headers={"Authorization": f"Bearer {st.session_state['token']}"})
+
+            if col3.button("👀", key=f"view_{n['id']}"):
+                requests.post(f"{BASE_URL}/notices/{n['id']}/react",
+                              json={"reaction": "👀"},
+                              headers={"Authorization": f"Bearer {st.session_state['token']}"})
+
+            st.divider()
+
+    # POLLS
+
+    # ---------------- CREATE POLL ----------------
+    elif menu == "Create Poll":
+        question = st.text_input("Poll Question")
+        options = st.text_area("Options (comma separated)")
+
+        multi_select = st.toggle("Allow multiple selections")
+
+        if st.button("Create Poll", key="create_poll_faculty"):
+            if not question or not options:
+                st.warning("Fill all fields")
+                return
+
+        option_list = [opt.strip() for opt in options.split(",")]
+
+        res = requests.post(
+            f"{BASE_URL}/polls/",
+            json={
+                "question": question,
+                "options": option_list,
+                "multi_select": multi_select   # 👈 NEW
+            },
+            headers={"Authorization": f"Bearer {st.session_state['token']}"}
+        )
+
+        st.success("Poll created ✅")
+
+    elif menu == "View Polls":
+        res = requests.get(
+            f"{BASE_URL}/polls/",
+            headers={"Authorization": f"Bearer {st.session_state['token']}"}
+        )
+
+        for p in res.json():
+            st.subheader(p["question"])
+
+            if p.get("multi_select"):
+                choice = st.multiselect(
+                    "Select options",
+                    p["options"],
+                    key=f"poll_{p['id']}"
+                )
+            else:
+                choice = st.radio(
+                    "Choose option",
+                    p["options"],
+                    key=f"poll_{p['id']}"
+                )
+
+            if st.button("Vote", key=f"vote_{p['id']}"):
+                requests.post(
+                    f"{BASE_URL}/polls/{p['id']}/vote",
+                    json={
+                        "options": choice if isinstance(choice, list) else [choice]
+                    },
+                    headers={"Authorization": f"Bearer {st.session_state['token']}"}
+                )
+                st.success("Voted ✅")
+                st.rerun()
+
+
 # ---------------- FACULTY ----------------
 def faculty_dashboard():
     sidebar()
@@ -569,28 +714,28 @@ def faculty_dashboard():
     # ---------------- CREATE POLL ----------------
     elif menu == "Create Poll":
         question = st.text_input("Poll Question")
-    options = st.text_area("Options (comma separated)")
+        options = st.text_area("Options (comma separated)")
 
-    multi_select = st.toggle("Allow multiple selections")
+        multi_select = st.toggle("Allow multiple selections")
 
-    if st.button("Create Poll", key="create_poll_faculty"):
-        if not question or not options:
-            st.warning("Fill all fields")
-            return
+        if st.button("Create Poll", key="create_poll_faculty"):
+            if not question or not options:
+                st.warning("Fill all fields")
+                return
 
-        option_list = [opt.strip() for opt in options.split(",")]
+            option_list = [opt.strip() for opt in options.split(",")]
 
-        res = requests.post(
-            f"{BASE_URL}/polls/",
-            json={
-                "question": question,
-                "options": option_list,
-                "multi_select": multi_select   # 👈 NEW
-            },
-            headers={"Authorization": f"Bearer {st.session_state['token']}"}
-        )
+            res = requests.post(
+                f"{BASE_URL}/polls/",
+                json={
+                    "question": question,
+                    "options": option_list,
+                    "multi_select": multi_select   # 👈 NEW
+                },
+                headers={"Authorization": f"Bearer {st.session_state['token']}"}
+            )
 
-        st.success("Poll created ✅")
+            st.success("Poll created ✅")
 
     # ---------------- VIEW POLLS ----------------
     elif menu == "View Polls":
@@ -786,6 +931,8 @@ else:
 
     if role == "student":
         student_dashboard()
+    elif role == "cr":
+         cr_dashboard()
     elif role == "faculty":
         faculty_dashboard()
     elif role == "admin":

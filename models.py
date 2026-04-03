@@ -42,8 +42,9 @@ class Poll(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     question = db.Column(db.String(200))
     options = db.Column(db.JSON)  # ["10AM", "2PM"]
-    created_by = db.Column(db.Boolean, default=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    multi_select = db.Column(db.Boolean, default=False)
 
 
 class Vote(db.Model):

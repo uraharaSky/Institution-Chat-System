@@ -21,7 +21,10 @@ def create_poll():
         return jsonify({"msg": "Not allowed"}), 403
 
     data = request.get_json()
-
+    print("RAW DATA:", data)
+    print("QUESTION:", data.get("question"))
+    print("OPTIONS:", data.get("options"))
+    print("TYPE OPTIONS:", type(data.get("options")))
     question = data.get("question")
     options = data.get("options")  # list
 
