@@ -62,3 +62,5 @@ class Message(db.Model):
     content = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default="sent")  # sent/delivered/read
+    delivered = db.Column(db.Boolean, default=False)
+    seen = db.Column(db.Boolean, default=False)

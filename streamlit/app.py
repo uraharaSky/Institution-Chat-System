@@ -265,7 +265,6 @@ def student_dashboard():
 
         import time
 
-
         st.subheader("💬 Chat System")
 
         # 🔐 Headers
@@ -273,77 +272,157 @@ def student_dashboard():
             "Authorization": f"Bearer {st.session_state['token']}"
         }
 
+        # 🔧 Initialize session state
+        if "auto_refresh" not in st.session_state:
+            st.session_state["auto_refresh"] = True
+
+        if "chat_user" not in st.session_state:
+            st.session_state["chat_user"] = None
+
+        if "chat_input" not in st.session_state:
+            st.session_state["chat_input"] = ""
+
+
+
         # 👥 Fetch users
         res = requests.get(f"{BASE_URL_Chat}/chat/users", headers=headers)
 
         if res.status_code != 200:
-            st.error("Failed to load users")
+            st.error(f"Error {res.status_code}: {res.text}")
         else:
             users = res.json()
 
+            # 🔍 SEARCH BAR
+            search_query = st.text_input("🔍 Search users", key="user_search")
+
             st.write("### 👥 Start a Conversation")
 
+            # 🔍 Filter users
+            filtered_users = [
+                user for user in users
+                if search_query.lower() in user["name"].lower()
+            ]
+
+            if not filtered_users:
+                st.info("No users found")
+
             # 📌 Select user
-            for user in users:
-                if st.button(f"{user['name']} ({user['role']})", key=f"user_{user['id']}"):
+            for idx, user in enumerate(filtered_users):
+                if st.button(
+                        f"{user['name']} ({user['role']})",
+                        key=f"user_{user['id']}_{idx}"):
+
+                    # 🔥 Reset chat-related state
                     st.session_state["chat_user"] = user
+                    st.session_state["chat_input"] = ""   # clear old message
+                    st.session_state.pop("last_sent", None)
+                    st.rerun()
 
         # 💬 If user selected → open chat
         if "chat_user" in st.session_state:
 
-            selected_user = st.session_state["chat_user"]
+            selected_user = st.session_state.get("chat_user")
 
-            st.divider()
-            st.write(f"## 💬 Chat with {selected_user['name']}")
+            if selected_user:
 
-            # 📥 Fetch messages
-            messages_res = requests.get(
-                f"{BASE_URL_Chat}/chat/messages/{selected_user['id']}",
-                headers=headers
-            )
+                st.divider()
+                st.write(f"## 💬 Chat with {selected_user['name']}")
 
-            if messages_res.status_code != 200:
-                st.error("Failed to load messages")
-            else:
-                messages = messages_res.json()
 
-                # 💬 Display messages
-                for msg in messages:
-                    if msg["sender_id"] == int(st.session_state["user_id"]):
-                        st.markdown(f"🟢 **You:** {msg['content']}  \n🕒 {msg['timestamp']}")
-                    else:
-                        st.markdown(f"🔵 **{selected_user['name']}:** {msg['content']}  \n🕒 {msg['timestamp']}")
-
-            st.divider()
-
-            # ✉️ Send message
-            new_msg = st.text_input("Type a message", key="chat_input")
-
-            if st.button("Send", key="send_msg"):
-
-                if not new_msg.strip():
-                    st.warning("Message cannot be empty")
-
+                # 📥 Fetch messages
+                messages_res = requests.get(
+                    f"{BASE_URL_Chat}/chat/messages/{selected_user['id']}",
+                    headers=headers
+                )
+                st.empty()
+                if messages_res.status_code != 200:
+                    st.error("Failed to load messages")
                 else:
-                    send_res = requests.post(
+                    messages = messages_res.json()
+
+                    # 💬 Display messages (cleaner)
+                    for msg in messages:
+                        if msg["sender_id"] == int(st.session_state["user_id"]):
+                            st.markdown(
+                                f"""
+                            <div style='display:flex; justify-content:flex-end;'>
+                                <div style='
+                                    background:#25D366;
+                                    color:white;
+                                    padding:8px 12px;
+                                    border-radius:15px;
+                                    max-width:60%;
+                                    margin:5px;
+                                    word-wrap:break-word;
+                                '>
+                                    <b>You</b><br>
+                                    {msg['content']}<br>
+                                    <small style='opacity:0.8'>{msg['timestamp']}</small>
+                                </div>
+                            </div>
+                            """,
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.markdown(
+                                f"""
+                            <div style='display:flex; justify-content:flex-start;'>
+                                <div style='
+                                    background:#E5E5EA;
+                                    color:black;
+                                    padding:8px 12px;
+                                    border-radius:15px;
+                                    max-width:60%;
+                                    margin:5px;
+                                    word-wrap:break-word;
+                                '>
+                                    <b>{selected_user['name']}</b><br>
+                                    {msg['content']}<br>
+                                    <small style='opacity:0.6'>{msg['timestamp']}</small>
+                                </div>
+                            </div>
+                            """,
+                                unsafe_allow_html=True
+                            )
+
+                st.divider()
+
+                # ✉️ Send message
+                def send_message_callback(selected_user, headers):
+
+                    msg = st.session_state.get("chat_input", "")
+
+                    if not msg.strip():
+                        st.warning("Message cannot be empty")
+                        return
+
+                    res = requests.post(
                         f"{BASE_URL_Chat}/chat/send",
                         json={
                             "receiver_id": selected_user["id"],
-                            "content": new_msg
+                            "content": msg
                         },
                         headers=headers
                     )
 
-                    if send_res.status_code == 200:
-                        st.success("Message sent ✅")
-                        time.sleep(1)
-                        st.rerun()
+                    if res.status_code == 200:
+                        st.session_state["chat_input"] = ""  # ✅ clear input
                     else:
                         st.error("Failed to send message")
+                # ✉️ Input box
+                st.text_input("Type a message", key="chat_input")
 
-            # 🔄 Auto refresh (simulate real-time)
-            time.sleep(2)
-            st.rerun()
+                # 📤 Send button
+                st.button(
+                    "Send",
+                    key="send_msg",
+                    on_click=send_message_callback,
+                    args=(selected_user, headers)
+    )
+                # 🔄 Auto refresh ONLY when chat open
+                if selected_user in st.session_state and st.session_state["auto_refresh"]:
+                    time.sleep(2)
+                    st.rerun()
 
     # NOTICES
     elif menu == "Notices":
@@ -464,16 +543,29 @@ def cr_dashboard():
         res = requests.get(f"{BASE_URL_Chat}/chat/users", headers=headers)
 
         if res.status_code != 200:
-            st.error("Failed to load users")
+            st.error(f"Error {res.status_code}: {res.text}")
         else:
             users = res.json()
 
+            # 🔍 SEARCH BAR
+            search_query = st.text_input("🔍 Search users", key="user_search")
+
             st.write("### 👥 Start a Conversation")
 
+            # 🔍 Filter users
+            filtered_users = [
+                user for user in users
+                if search_query.lower() in user["name"].lower()
+            ]
+
+            if not filtered_users:
+                st.info("No users found")
+
             # 📌 Select user
-            for user in users:
+            for user in filtered_users:
                 if st.button(f"{user['name']} ({user['role']})", key=f"user_{user['id']}"):
                     st.session_state["chat_user"] = user
+                    st.rerun()  # 👈 important for instant switch
 
         # 💬 If user selected → open chat
         if "chat_user" in st.session_state:
@@ -494,44 +586,87 @@ def cr_dashboard():
             else:
                 messages = messages_res.json()
 
-                # 💬 Display messages
+                # 💬 Display messages (cleaner)
                 for msg in messages:
                     if msg["sender_id"] == int(st.session_state["user_id"]):
-                        st.markdown(f"🟢 **You:** {msg['content']}  \n🕒 {msg['timestamp']}")
+                        st.markdown(
+                            f"""
+                            <div style='display:flex; justify-content:flex-end;'>
+                                <div style='
+                                    background:#25D366;
+                                    color:white;
+                                    padding:8px 12px;
+                                    border-radius:15px;
+                                    max-width:60%;
+                                    margin:5px;
+                                    word-wrap:break-word;
+                                '>
+                                    <b>You</b><br>
+                                    {msg['content']}<br>
+                                    <small style='opacity:0.8'>{msg['timestamp']}</small>
+                                </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
                     else:
-                        st.markdown(f"🔵 **{selected_user['name']}:** {msg['content']}  \n🕒 {msg['timestamp']}")
+                        st.markdown(
+                            f"""
+                            <div style='display:flex; justify-content:flex-start;'>
+                                <div style='
+                                    background:#E5E5EA;
+                                    color:black;
+                                    padding:8px 12px;
+                                    border-radius:15px;
+                                    max-width:60%;
+                                    margin:5px;
+                                    word-wrap:break-word;
+                                '>
+                                    <b>{selected_user['name']}</b><br>
+                                    {msg['content']}<br>
+                                    <small style='opacity:0.6'>{msg['timestamp']}</small>
+                                </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
 
             st.divider()
 
             # ✉️ Send message
+            if "chat_input" not in st.session_state:
+                st.session_state["chat_input"] = ""
+
             new_msg = st.text_input("Type a message", key="chat_input")
 
-            if st.button("Send", key="send_msg"):
+            col1, col2 = st.columns([5,1])
 
-                if not new_msg.strip():
-                    st.warning("Message cannot be empty")
+            with col2:
+                if st.button("Send", key="send_msg"):
 
-                else:
-                    send_res = requests.post(
-                        f"{BASE_URL_Chat}/chat/send",
-                        json={
-                            "receiver_id": selected_user["id"],
-                            "content": new_msg
-                        },
-                        headers=headers
-                    )
+                    if not new_msg.strip():
+                        st.warning("Message cannot be empty")
 
-                    if send_res.status_code == 200:
-                        st.success("Message sent ✅")
-                        time.sleep(1)
-                        st.rerun()
                     else:
-                        st.error("Failed to send message")
+                        send_res = requests.post(
+                            f"{BASE_URL_Chat}/chat/send",
+                            json={
+                                "receiver_id": selected_user["id"],
+                                "content": new_msg
+                            },
+                            headers=headers
+                        )
 
-            # 🔄 Auto refresh (simulate real-time)
+                        if send_res.status_code == 200:
+                            st.session_state["chat_input"] = ""  # 🔥 FIX
+                            time.sleep(0.5)
+                            st.rerun()
+                        else:
+                            st.error("Failed to send message")
+
+            # 🔄 Auto refresh ONLY when chat open
             time.sleep(2)
             st.rerun()
-
     # NOTICES
 
     # ---------------- CREATE NOTICE ----------------
@@ -655,7 +790,8 @@ def faculty_dashboard():
             "Create Notice",
             "View Notices",
             "Create Poll",
-            "View Polls"
+            "View Polls",
+            "Chat"
         ]
     )
 
@@ -1008,6 +1144,91 @@ def faculty_dashboard():
 
             # 🔥 POLL CARD END
             st.markdown("</div>", unsafe_allow_html=True)
+
+        # CHAT
+    elif menu == "Chat":
+
+        import time
+
+
+        st.subheader("💬 Chat System")
+
+        # 🔐 Headers
+        headers = {
+            "Authorization": f"Bearer {st.session_state['token']}"
+        }
+
+        # 👥 Fetch users
+        res = requests.get(f"{BASE_URL_Chat}/chat/users", headers=headers)
+
+        if res.status_code != 200:
+            st.error("Failed to load users")
+        else:
+            users = res.json()
+
+            st.write("### 👥 Start a Conversation")
+
+            # 📌 Select user
+            for user in users:
+                if st.button(f"{user['name']} ({user['role']})", key=f"user_{user['id']}"):
+                    st.session_state["chat_user"] = user
+
+        # 💬 If user selected → open chat
+        if "chat_user" in st.session_state:
+
+            selected_user = st.session_state["chat_user"]
+
+            st.divider()
+            st.write(f"## 💬 Chat with {selected_user['name']}")
+
+            # 📥 Fetch messages
+            messages_res = requests.get(
+                f"{BASE_URL_Chat}/chat/messages/{selected_user['id']}",
+                headers=headers
+            )
+
+            if messages_res.status_code != 200:
+                st.error("Failed to load messages")
+            else:
+                messages = messages_res.json()
+
+                # 💬 Display messages
+                for msg in messages:
+                    if msg["sender_id"] == int(st.session_state["user_id"]):
+                        st.markdown(f"🟢 **You:** {msg['content']}  \n🕒 {msg['timestamp']}")
+                    else:
+                        st.markdown(f"🔵 **{selected_user['name']}:** {msg['content']}  \n🕒 {msg['timestamp']}")
+
+            st.divider()
+
+            # ✉️ Send message
+            new_msg = st.text_input("Type a message", key="chat_input")
+
+            if st.button("Send", key="send_msg"):
+
+                if not new_msg.strip():
+                    st.warning("Message cannot be empty")
+
+                else:
+                    send_res = requests.post(
+                        f"{BASE_URL_Chat}/chat/send",
+                        json={
+                            "receiver_id": selected_user["id"],
+                            "content": new_msg
+                        },
+                        headers=headers
+                    )
+
+                    if send_res.status_code == 200:
+                        st.success("Message sent ✅")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("Failed to send message")
+
+            # 🔄 Auto refresh (simulate real-time)
+            time.sleep(2)
+            st.rerun()
 # ---------------- ADMIN ----------------
 def admin_dashboard():
     sidebar()
