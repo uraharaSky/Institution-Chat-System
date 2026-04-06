@@ -588,16 +588,23 @@ def student_dashboard():
                 )
 
             if st.button("Vote", key=f"vote_{p['id']}"):
+
+                selected = choice if isinstance(choice, list) else [choice]
+
+                option_indices = [
+                    p["options"].index(opt) for opt in selected
+                ]
+
                 requests.post(
                     f"{BASE_URL}/polls/{p['id']}/vote",
                     json={
-                        "options": choice if isinstance(choice, list) else [choice]
+                        "option_indices": option_indices   # ✅ MUST match backend
                     },
                     headers={"Authorization": f"Bearer {st.session_state['token']}"}
                 )
+
                 st.success("Voted ✅")
                 st.rerun()
-
 
 # ---------------- CR DASHBOARD ----------------
 def cr_dashboard():
@@ -1007,13 +1014,21 @@ def cr_dashboard():
                 )
 
             if st.button("Vote", key=f"vote_{p['id']}"):
+
+                selected = choice if isinstance(choice, list) else [choice]
+
+                option_indices = [
+                    p["options"].index(opt) for opt in selected
+                ]
+
                 requests.post(
                     f"{BASE_URL}/polls/{p['id']}/vote",
                     json={
-                        "options": choice if isinstance(choice, list) else [choice]
+                        "option_indices": option_indices   # ✅ FIXED KEY + DATA
                     },
                     headers={"Authorization": f"Bearer {st.session_state['token']}"}
                 )
+
                 st.success("Voted ✅")
                 st.rerun()
 
@@ -1264,24 +1279,29 @@ def faculty_dashboard():
 
     # ---------------- CREATE POLL ----------------
     elif menu == "Create Poll":
+
         question = st.text_input("Poll Question")
         options = st.text_area("Options (comma separated)")
-
         multi_select = st.toggle("Allow multiple selections")
 
         if st.button("Create Poll", key="create_poll_faculty"):
+
             if not question or not options:
                 st.warning("Fill all fields")
                 return
 
-            option_list = [opt.strip() for opt in options.split(",")]
+            option_list = [opt.strip() for opt in options.split(",") if opt.strip()]
+
+            if len(option_list) < 2:
+                st.warning("Enter at least 2 options")
+                return
 
             res = requests.post(
                 f"{BASE_URL}/polls/",
                 json={
                     "question": question,
                     "options": option_list,
-                    "multi_select": multi_select   # 👈 NEW
+                    "multi_select": multi_select   # ✅ important
                 },
                 headers={"Authorization": f"Bearer {st.session_state['token']}"}
             )
@@ -1310,61 +1330,81 @@ def faculty_dashboard():
 
         if not polls:
             st.markdown("""
-            <div style='text-align:center; padding:30px; color:#9CA3AF'>
-                <h4>No polls available</h4>
-            </div>
-            """, unsafe_allow_html=True)
+                <div style='text-align:center; padding:30px; color:#9CA3AF'>
+                    <h4>No polls available</h4>
+                </div>
+                """, unsafe_allow_html=True)
             return
 
         for p in polls:
 
             # 🔥 POLL CARD START
             st.markdown("""
-            <div style='
-                padding: 20px;
-                border-radius: 14px;
-                background: rgba(255,255,255,0.03);
-                margin-bottom: 20px;
-            '>
-            """, unsafe_allow_html=True)
+                <div style='
+                    padding: 20px;
+                    border-radius: 14px;
+                    background: rgba(255,255,255,0.03);
+                    margin-bottom: 20px;
+                '>
+                """, unsafe_allow_html=True)
 
             st.markdown(f"### 📊 {p['question']}")
 
-            # 👇 Input type
-            if p.get("multi_select"):
+            # ✅ INPUT (FIXED KEYS)
+
+            # 🔒 Normalize multi_select properly
+            is_multi = p.get("multi_select")
+
+            if isinstance(is_multi, str):
+                is_multi = is_multi.lower() == "true"
+
+            # 👇 Use normalized value
+            if is_multi:
                 selected = st.multiselect(
                     "Select options",
                     p["options"],
-                    key=f"poll_{p['id']}"
+                    key=f"poll_multi_{p['id']}"
                 )
             else:
                 selected = st.radio(
                     "Choose option",
                     p["options"],
-                    key=f"poll_{p['id']}"
-                )
+                    index=None,
+                    key=f"poll_single_{p['id']}"
+    )
 
-            # 👇 Vote button
-            # if st.button("Vote", key=f"vote_{p['id']}", use_container_width=True):
-            #
-            #     payload = {
-            #         "options": selected if isinstance(selected, list) else [selected]
-            #     }
-            #
-            #     vote_res = requests.post(
-            #         f"{BASE_URL}/polls/{p['id']}/vote",
-            #         json=payload,
-            #         headers={"Authorization": f"Bearer {st.session_state['token']}"}
-            #     )
-            #
-            #     if vote_res.status_code == 200:
-            #         st.success("Vote recorded ✅")
-            #         st.rerun()
-            #     else:
-            #         st.error("Failed to vote")
-            #         st.write(vote_res.text)
+            # ✅ VOTE BUTTON
+            if st.button("Vote", key=f"vote_{p['id']}", use_container_width=True):
 
-            # 👇 RESULTS
+                selected_list = selected if isinstance(selected, list) else [selected]
+
+                # ❌ Prevent empty vote
+                if not selected_list or selected_list == [None]:
+                    st.warning("Please select an option")
+                else:
+                    # ✅ Convert to indices
+                    option_indices = [
+                        p["options"].index(opt) for opt in selected_list
+                    ]
+
+                    vote_res = requests.post(
+                        f"{BASE_URL}/polls/{p['id']}/vote",
+                        json={"option_indices": option_indices},
+                        headers={"Authorization": f"Bearer {st.session_state['token']}"}
+                    )
+
+                    if vote_res.status_code == 200:
+                        # ✅ Reset state (important)
+                        st.session_state.pop(f"poll_multi_{p['id']}", None)
+                        st.session_state.pop(f"poll_single_{p['id']}", None)
+
+                        st.success("Vote recorded ✅")
+                        st.rerun()
+                    else:
+                        st.error("Failed to vote")
+                        st.write(vote_res.text)
+
+            # ✅ RESULTS
             result_res = requests.get(
                 f"{BASE_URL}/polls/{p['id']}/results",
                 headers={"Authorization": f"Bearer {st.session_state['token']}"}
@@ -1376,10 +1416,13 @@ def faculty_dashboard():
                 if results:
                     st.markdown("#### 📈 Results")
 
-                    total_votes = sum(results.values())
+                    total_votes = results.get("total_votes", 0)
+                    st.caption(f"Total Votes: {total_votes}")
 
-                    for opt, count in results.items():
-                        percentage = (count / total_votes * 100) if total_votes > 0 else 0
+                    for r in results.get("results", []):
+                        opt = r["option"]
+                        count = r["votes"]
+                        percentage = r["percentage"]
 
                         st.markdown(f"**{opt}** — {count} votes ({percentage:.1f}%)")
                         st.progress(percentage / 100)
@@ -1389,7 +1432,6 @@ def faculty_dashboard():
 
             # 🔥 POLL CARD END
             st.markdown("</div>", unsafe_allow_html=True)
-
         # CHAT
     # CHAT
     elif menu == "Chat":

@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import Poll, Vote, User
 from extensions import db
+from collections import Counter
 
 poll_bp = Blueprint('poll', __name__)
 
@@ -51,45 +52,48 @@ def create_poll():
 def vote_poll(poll_id):
 
     user_id = int(get_jwt_identity())
-
     data = request.get_json()
-    selected_options = data.get("options")  #  list
+
+    option_indices = data.get("option_indices", [])
 
     poll = Poll.query.get(poll_id)
     if not poll:
         return jsonify({"msg": "Poll not found"}), 404
 
-    if not selected_options or not isinstance(selected_options, list):
+    # ✅ Validate input
+    if not option_indices or not isinstance(option_indices, list):
         return jsonify({"msg": "Invalid input"}), 400
 
-    # ✅ Validate options
-    for opt in selected_options:
-        if opt not in poll.options:
-            return jsonify({"msg": f"Invalid option: {opt}"}), 400
+    # ✅ Validate indices range
+    for idx in option_indices:
+        if not isinstance(idx, int) or idx < 0 or idx >= len(poll.options):
+            return jsonify({"msg": f"Invalid option index: {idx}"}), 400
 
-    # Check existing vote
-    existing = Vote.query.filter_by(
+    # ✅ If single select, restrict
+    if not poll.multi_select and len(option_indices) > 1:
+        return jsonify({"msg": "Only one option allowed"}), 400
+
+    # 🧹 Remove old votes (important)
+    Vote.query.filter_by(
         poll_id=poll_id,
         user_id=user_id
-    ).first()
+    ).delete()
 
-    import json
-
-    if existing:
-        existing.selected_options = json.dumps(selected_options)
-        existing.selected_option = selected_options[0] if selected_options else None
-    else:
+    # ✅ Insert new votes
+    for idx in option_indices:
         vote = Vote(
             poll_id=poll_id,
             user_id=user_id,
-            selected_options=json.dumps(selected_options),
-            selected_option=selected_options[0] if selected_options else None
+            option_index=idx
         )
         db.session.add(vote)
+
     db.session.commit()
 
     return jsonify({"msg": "Vote recorded"}), 200
 # poll results
+
+
 
 @poll_bp.route('/<int:poll_id>/results', methods=['GET'])
 @jwt_required()
@@ -101,24 +105,28 @@ def poll_results(poll_id):
 
     votes = Vote.query.filter_by(poll_id=poll_id).all()
 
-    import json
+    # ✅ Count votes using option_index
+    counts = Counter([v.option_index for v in votes])
 
-    count = {}
+    total_votes = len(votes)
 
-    for v in votes:
+    results = []
 
-        if not v.selected_options:
-            continue
+    for idx, option in enumerate(poll.options):
+        vote_count = counts.get(idx, 0)
+        percentage = (vote_count / total_votes * 100) if total_votes > 0 else 0
 
-        try:
-            selected_list = json.loads(v.selected_options)
-        except:
-            continue
+        results.append({
+            "option": option,
+            "votes": vote_count,
+            "percentage": round(percentage, 2)
+        })
 
-        for opt in selected_list:
-            count[opt] = count.get(opt, 0) + 1
-
-    return jsonify(count), 200
+    return jsonify({
+        "question": poll.question,
+        "total_votes": total_votes,
+        "results": results
+    }), 200
 
 @poll_bp.route('/', methods=['GET'])
 @jwt_required()
@@ -150,7 +158,7 @@ def get_polls():
             "id": p.id,
             "question": p.question,
             "options": options,
-            "multi_select": multi_select
+            "multi_select": bool(p.multi_select)
         })
 
     return jsonify(result), 200

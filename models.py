@@ -51,7 +51,8 @@ class Vote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     poll_id = db.Column(db.Integer)
     user_id = db.Column(db.Integer)
-    selected_options = db.Column(db.Text)
+    # selected_options = db.Column(db.Text)
+    option_index = db.Column(db.Integer)
 
 
 class Message(db.Model):
@@ -81,3 +82,4 @@ class GroupMessage(db.Model):
     sender_id = db.Column(db.Integer)
     content = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
