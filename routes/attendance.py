@@ -17,9 +17,12 @@ def generate_code():
 @attendance_bp.route('/start', methods=['POST'])
 @jwt_required()
 def start_session():
+
+    from utils.notification import create_notification
+
     print("API HIT ")
 
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     print("User ID:", user_id)
 
     user = User.query.get(user_id)
@@ -34,6 +37,24 @@ def start_session():
     session = Session(faculty_id=user_id, code=code)
 
     db.session.add(session)
+
+    # =========================
+    # 🔔 NOTIFICATIONS
+    # =========================
+
+    students = User.query.filter(User.role == "student").all()
+
+    for s in students:
+        create_notification(
+            s.id,
+            "Attendance Started",
+            f"New attendance session started. Code: {code}",
+            "attendance",
+            ref_id=session.id,
+            ref_type="attendance"
+        )
+
+    # ✅ single commit
     db.session.commit()
 
     print("Session saved")

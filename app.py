@@ -8,6 +8,8 @@ from routes.polls import poll_bp
 from routes.admin import admin_bp
 from routes.auth import auth_bp
 from routes.groups import groups_bp
+from routes.notification import notif_bp
+
 import requests
 
 def create_app():
@@ -39,6 +41,8 @@ def create_app():
 
 
     app.register_blueprint(groups_bp)
+
+    app.register_blueprint(notif_bp)
 
 
     return app

@@ -22,15 +22,15 @@ def get_chat_users():
 
         # 🔒 Role-based filtering
         if current_user.role == "student":
-            if user.role not in ["student", "cr"]:
+            if user.role not in ["student", "cr","faculty"]:
                 continue
 
         elif current_user.role == "cr":
-            if user.role not in ["student", "teacher"]:
+            if user.role not in ["student", "faculty", "cr"]:
                 continue
 
-        elif current_user.role == "teacher":
-            if user.role != "cr":
+        elif current_user.role == "faculty":
+            if user.role not in ["cr","student", "faculty"]:
                 continue
 
         result.append({
@@ -44,6 +44,9 @@ def get_chat_users():
 @chat_bp.route("/send", methods=["POST"])
 @jwt_required()
 def send_message():
+
+    from utils.notification import create_notification
+
     sender_id = int(get_jwt_identity())
     data = request.get_json()
 
@@ -56,7 +59,7 @@ def send_message():
     # 🔑 Create consistent chat_id
     chat_id = f"{min(sender_id, receiver_id)}_{max(sender_id, receiver_id)}"
 
-
+    # ✅ Save message
     msg = Message(
         sender_id=sender_id,
         receiver_id=receiver_id,
@@ -67,6 +70,23 @@ def send_message():
     )
 
     db.session.add(msg)
+
+    # =========================
+    # 🔔 NOTIFICATION
+    # =========================
+
+    sender = User.query.get(sender_id)
+
+    create_notification(
+        receiver_id,
+        "New Message",
+        f"{sender.name} sent you a message",
+        "chat",
+        ref_id=chat_id,
+        ref_type="user"
+    )
+
+    # ✅ single commit
     db.session.commit()
 
     return jsonify({"msg": "Message sent"}), 200

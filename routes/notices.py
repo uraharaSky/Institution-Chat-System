@@ -36,6 +36,24 @@ def create_notice():
     )
 
     db.session.add(notice)
+
+    # =========================
+    # 🔔 ADD NOTIFICATIONS HERE
+    # =========================
+    from utils.notification import create_notification
+
+    users = User.query.all()   # or filter students if needed
+
+    for u in users:
+        create_notification(
+            u.id,
+            "New Notice",
+            f"{title}",
+            "notice",
+            ref_id=notice.id,
+            ref_type="notice"
+        )
+
     db.session.commit()
 
     return jsonify({

@@ -83,3 +83,13 @@ class GroupMessage(db.Model):
     content = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=False)
+    title = db.Column(db.String(100))        # 👈 short label
+    message = db.Column(db.String(255))      # 👈 full text
+    type = db.Column(db.String(50))          # "chat", "poll", "system"
+    reference_id = db.Column(db.Integer)     # 👈 poll_id / message_id
+    reference_type = db.Column(db.String(50))# "poll", "chat"
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

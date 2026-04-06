@@ -227,13 +227,112 @@ def sidebar():
 def student_dashboard():
     sidebar()
 
+    import time
+
+    if "notif_refresh" not in st.session_state:
+        st.session_state.notif_refresh = time.time()
+    if "mark_read_id" not in st.session_state:
+        st.session_state.mark_read_id = None
+
+
     st.markdown("## 👨‍🎓 Student Dashboard")
     st.divider()
 
-    menu = st.sidebar.selectbox(
+    # =========================
+    # 🔔 FLOATING BELL (TOP RIGHT)
+    # =========================
+    @st.cache_data(ttl=5)
+    def fetch_notifications(token):
+        res = requests.get(
+            f"{BASE_URL_Chat}/notifications/",
+            headers={"Authorization": f"Bearer {st.session_state['token']}"}
+        )
+        if res.status_code == 200:
+            return res.json()
+        return []
+
+    notifs = fetch_notifications(st.session_state['token'])
+    unread_count = sum(1 for n in notifs if not n["is_read"])
+
+    # container for positioning
+    bell_container = st.container()
+
+    with bell_container:
+        st.markdown(f"""
+        <div style="
+            position: fixed;
+            top: 20px;
+            right: 30px;
+            z-index: 9999;
+        ">
+        """, unsafe_allow_html=True)
+
+        with st.popover(f"🔔 {unread_count}"):
+
+            st.markdown("### 🔔 Notifications")
+
+            if not notifs:
+                st.info("No notifications")
+            else:
+                for n in notifs:
+
+                    bg = "#1E1E1E" if not n["is_read"] else "#111111"
+
+                    st.markdown(f"""
+                    <div style="
+                        padding:10px;
+                        margin-bottom:8px;
+                        border-radius:10px;
+                        background:{bg};
+                        border-left:4px solid {"#FF4B4B" if not n["is_read"] else "#444"};
+                    ">
+                        <b>{n["title"]}</b><br>
+                        <span style="color:#ccc">{n["message"]}</span><br>
+                        <small style="color:#777">{n["created_at"]}</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    if not n["is_read"]:
+                        if st.button("Mark as read", key=f"read_{n['id']}"):
+                            st.session_state.mark_read_id = n["id"]
+
+        st.markdown("</div>", unsafe_allow_html=True)
+    # =========================
+    # 🔄 PROCESS AFTER LOOP
+    # =========================
+
+    if st.session_state.mark_read_id is not None:
+
+        requests.post(
+            f"{BASE_URL_Chat}/notifications/{st.session_state.mark_read_id}/read",
+            headers={"Authorization": f"Bearer {st.session_state['token']}"}
+        )
+
+        st.session_state.mark_read_id = None
+        st.rerun()
+    st.divider()
+
+    # =========================
+    # 📌 FIXED MENU STATE
+    # =========================
+
+    menu_options = ["Mark Attendance", "My Attendance","Chat", "Notices", "Polls"]
+
+    if "menu" not in st.session_state:
+        st.session_state.menu = menu_options[0]
+
+    def update_menu():
+        st.session_state.menu = st.session_state.menu_select
+
+    st.sidebar.selectbox(
         "Menu",
-        ["Mark Attendance", "My Attendance","Chat", "Notices", "Polls"]
+        menu_options,
+        index=menu_options.index(st.session_state.menu),
+        key="menu_select",
+        on_change=update_menu
     )
+
+    menu = st.session_state.menu
 
     # MARK ATTENDANCE
     if menu == "Mark Attendance":
@@ -609,14 +708,121 @@ def student_dashboard():
 # ---------------- CR DASHBOARD ----------------
 def cr_dashboard():
     sidebar()
-
+#
     st.markdown("## 👨‍🎓 Class Representative Dashboard")
     st.divider()
+#
+#     menu = st.sidebar.selectbox(
+#         "Menu",
+#         ["Mark Attendance", "My Attendance","Chat", "Create Notice","View Notices","Create Poll", "View Polls"]
+#     )
+    import time
 
-    menu = st.sidebar.selectbox(
+    if "notif_refresh" not in st.session_state:
+        st.session_state.notif_refresh = time.time()
+    if "mark_read_id" not in st.session_state:
+        st.session_state.mark_read_id = None
+
+
+
+
+    # =========================
+    # 🔔 FLOATING BELL (TOP RIGHT)
+    # =========================
+    @st.cache_data(ttl=5)
+    def fetch_notifications(token):
+        res = requests.get(
+            f"{BASE_URL_Chat}/notifications/",
+            headers={"Authorization": f"Bearer {st.session_state['token']}"}
+        )
+        if res.status_code == 200:
+            return res.json()
+        return []
+
+    notifs = fetch_notifications(st.session_state['token'])
+    unread_count = sum(1 for n in notifs if not n["is_read"])
+
+    # container for positioning
+    bell_container = st.container()
+
+    with bell_container:
+        st.markdown(f"""
+        <div style="
+            position: fixed;
+            top: 20px;
+            right: 30px;
+            z-index: 9999;
+        ">
+        """, unsafe_allow_html=True)
+
+        with st.popover(f"🔔 {unread_count}"):
+
+            st.markdown("### 🔔 Notifications")
+
+            if not notifs:
+                st.info("No notifications")
+            else:
+                for n in notifs:
+
+                    bg = "#1E1E1E" if not n["is_read"] else "#111111"
+
+                    st.markdown(f"""
+                    <div style="
+                        padding:10px;
+                        margin-bottom:8px;
+                        border-radius:10px;
+                        background:{bg};
+                        border-left:4px solid {"#FF4B4B" if not n["is_read"] else "#444"};
+                    ">
+                        <b>{n["title"]}</b><br>
+                        <span style="color:#ccc">{n["message"]}</span><br>
+                        <small style="color:#777">{n["created_at"]}</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    if not n["is_read"]:
+                        if st.button("Mark as read", key=f"read_{n['id']}"):
+                            st.session_state.mark_read_id = n["id"]
+
+        st.markdown("</div>", unsafe_allow_html=True)
+    # =========================
+    # 🔄 PROCESS AFTER LOOP
+    # =========================
+
+    if st.session_state.mark_read_id is not None:
+
+        requests.post(
+            f"{BASE_URL_Chat}/notifications/{st.session_state.mark_read_id}/read",
+            headers={"Authorization": f"Bearer {st.session_state['token']}"}
+        )
+
+        st.session_state.mark_read_id = None
+        st.rerun()
+    st.divider()
+
+    # =========================
+    # 📌 FIXED MENU STATE
+    # =========================
+
+    menu_options = ["Mark Attendance", "My Attendance","Chat", "Create Notice","View Notices","Create Poll", "View Polls"]
+
+    if "menu" not in st.session_state:
+        st.session_state.menu = menu_options[0]
+
+    def update_menu():
+        st.session_state.menu = st.session_state.menu_select
+
+    index=menu_options.index(st.session_state.menu) if st.session_state.menu in menu_options else 0
+
+    st.sidebar.selectbox(
         "Menu",
-        ["Mark Attendance", "My Attendance","Chat", "Create Notice","View Notices","Create Poll", "View Polls"]
+        menu_options,
+        index = index,
+        key="menu_select",
+        on_change=update_menu
     )
+
+    menu = st.session_state.menu
 
     # MARK ATTENDANCE
     if menu == "Mark Attendance":
@@ -629,6 +835,8 @@ def cr_dashboard():
                 headers={"Authorization": f"Bearer {st.session_state['token']}"}
             )
             st.json(res.json())
+
+
 
     # MY ATTENDANCE
     elif menu == "My Attendance":
@@ -977,60 +1185,105 @@ def cr_dashboard():
                 st.warning("Fill all fields")
                 return
 
-        option_list = [opt.strip() for opt in options.split(",")]
+            option_list = [opt.strip() for opt in options.split(",")]
 
-        res = requests.post(
-            f"{BASE_URL}/polls/",
-            json={
-                "question": question,
-                "options": option_list,
-                "multi_select": multi_select   # 👈 NEW
-            },
-            headers={"Authorization": f"Bearer {st.session_state['token']}"}
-        )
+            res = requests.post(
+                f"{BASE_URL}/polls/",
+                json={
+                    "question": question,
+                    "options": option_list,
+                    "multi_select": multi_select   # 👈 NEW
+                },
+                headers={"Authorization": f"Bearer {st.session_state['token']}"}
+            )
 
-        st.success("Poll created ✅")
+            st.success("Poll created ✅")
 
     elif menu == "View Polls":
+
         res = requests.get(
             f"{BASE_URL}/polls/",
             headers={"Authorization": f"Bearer {st.session_state['token']}"}
         )
 
-        for p in res.json():
-            st.subheader(p["question"])
+        # ✅ Check response first
+        if res.status_code != 200:
+            st.error("Failed to fetch polls")
+            st.write(res.text)
+            return
+
+        try:
+            polls = res.json()
+        except:
+            st.error("Invalid server response")
+            st.write(res.text)
+            return
+
+        # ✅ VERY IMPORTANT
+        if not isinstance(polls, list):
+            st.error("Unexpected response format")
+            st.write(polls)
+            return
+
+        if not polls:
+            st.info("No polls available")
+            return
+
+        for p in polls:
+
+            if not isinstance(p, dict):
+                continue  # safety
+
+            st.subheader(p.get("question", "No question"))
+
+            options = p.get("options", [])
+
+            # 🔒 Ensure options is list
+            if isinstance(options, str):
+                import json
+                try:
+                    options = json.loads(options)
+                except:
+                    options = []
 
             if p.get("multi_select"):
                 choice = st.multiselect(
                     "Select options",
-                    p["options"],
-                    key=f"poll_{p['id']}"
+                    options,
+                    key=f"poll_multi_{p['id']}"
                 )
             else:
                 choice = st.radio(
                     "Choose option",
-                    p["options"],
-                    key=f"poll_{p['id']}"
+                    options,
+                    index=None,
+                    key=f"poll_single_{p['id']}"
                 )
 
             if st.button("Vote", key=f"vote_{p['id']}"):
 
                 selected = choice if isinstance(choice, list) else [choice]
 
+                if not selected or selected == [None]:
+                    st.warning("Please select an option")
+                    continue
+
                 option_indices = [
-                    p["options"].index(opt) for opt in selected
+                    options.index(opt) for opt in selected
                 ]
 
-                requests.post(
+                vote_res = requests.post(
                     f"{BASE_URL}/polls/{p['id']}/vote",
-                    json={
-                        "option_indices": option_indices   # ✅ FIXED KEY + DATA
-                    },
+                    json={"option_indices": option_indices},
                     headers={"Authorization": f"Bearer {st.session_state['token']}"}
                 )
 
-                st.success("Voted ✅")
-                st.rerun()
+                if vote_res.status_code == 200:
+                    st.success("Voted ✅")
+                    st.rerun()
+                else:
+                    st.error("Vote failed")
+                    st.write(vote_res.text)
 
 
 # ---------------- FACULTY ----------------
@@ -1040,20 +1293,137 @@ def faculty_dashboard():
     st.markdown("## 👨‍🏫 Faculty Dashboard")
     st.caption("Manage sessions, notices, and polls")
     st.divider()
+#
+#     menu = st.sidebar.selectbox(
+#         "Menu",
+#         [
+#             "Start Session",
+#             "Sessions",
+#             "Live Attendance",
+#             "Create Notice",
+#             "View Notices",
+#             "Create Poll",
+#             "View Polls",
+#             "Chat"
+#         ]
+#     )
 
-    menu = st.sidebar.selectbox(
+    import time
+
+    if "notif_refresh" not in st.session_state:
+        st.session_state.notif_refresh = time.time()
+    if "mark_read_id" not in st.session_state:
+        st.session_state.mark_read_id = None
+
+
+
+
+    # =========================
+    # 🔔 FLOATING BELL (TOP RIGHT)
+    # =========================
+    @st.cache_data(ttl=5)
+    def fetch_notifications(token):
+        res = requests.get(
+            f"{BASE_URL_Chat}/notifications/",
+            headers={"Authorization": f"Bearer {st.session_state['token']}"}
+        )
+        if res.status_code == 200:
+            return res.json()
+        return []
+
+    notifs = fetch_notifications(st.session_state['token'])
+    unread_count = sum(1 for n in notifs if not n["is_read"])
+
+    # container for positioning
+    bell_container = st.container()
+
+    with bell_container:
+        st.markdown(f"""
+        <div style="
+            position: fixed;
+            top: 20px;
+            right: 30px;
+            z-index: 9999;
+        ">
+        """, unsafe_allow_html=True)
+
+        with st.popover(f"🔔 {unread_count}"):
+
+            st.markdown("### 🔔 Notifications")
+
+            if not notifs:
+                st.info("No notifications")
+            else:
+                for n in notifs:
+
+                    bg = "#1E1E1E" if not n["is_read"] else "#111111"
+
+                    st.markdown(f"""
+                    <div style="
+                        padding:10px;
+                        margin-bottom:8px;
+                        border-radius:10px;
+                        background:{bg};
+                        border-left:4px solid {"#FF4B4B" if not n["is_read"] else "#444"};
+                    ">
+                        <b>{n["title"]}</b><br>
+                        <span style="color:#ccc">{n["message"]}</span><br>
+                        <small style="color:#777">{n["created_at"]}</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    if not n["is_read"]:
+                        if st.button("Mark as read", key=f"read_{n['id']}"):
+                            st.session_state.mark_read_id = n["id"]
+
+        st.markdown("</div>", unsafe_allow_html=True)
+    # =========================
+    # 🔄 PROCESS AFTER LOOP
+    # =========================
+
+    if st.session_state.mark_read_id is not None:
+
+        requests.post(
+            f"{BASE_URL_Chat}/notifications/{st.session_state.mark_read_id}/read",
+            headers={"Authorization": f"Bearer {st.session_state['token']}"}
+        )
+
+        st.session_state.mark_read_id = None
+        st.rerun()
+    st.divider()
+
+    # =========================
+    # 📌 FIXED MENU STATE
+    # =========================
+
+    menu_options = ["Start Session",
+                "Sessions",
+                "Live Attendance",
+                "Create Notice",
+                "View Notices",
+                "Create Poll",
+                "View Polls",
+                "Chat"]
+
+    if "menu" not in st.session_state:
+        st.session_state.menu = menu_options[0]
+
+    def update_menu():
+        st.session_state.menu = st.session_state.menu_select
+
+    index=menu_options.index(st.session_state.menu) if st.session_state.menu in menu_options else 0
+
+    st.sidebar.selectbox(
         "Menu",
-        [
-            "Start Session",
-            "Sessions",
-            "Live Attendance",
-            "Create Notice",
-            "View Notices",
-            "Create Poll",
-            "View Polls",
-            "Chat"
-        ]
+        menu_options,
+        index = index,
+        key="menu_select",
+        on_change=update_menu
     )
+
+    menu = st.session_state.menu
+
+
 
     # ---------------- START SESSION ----------------
     if menu == "Start Session":
@@ -1106,7 +1476,7 @@ def faculty_dashboard():
                     st.success("Session started ✅")
                     st.rerun()
 
-            return
+
 
         # ✅ ACTIVE SESSIONS
         st.metric("Active Sessions", len(sessions))
@@ -1373,36 +1743,6 @@ def faculty_dashboard():
                     key=f"poll_single_{p['id']}"
     )
 
-            # ✅ VOTE BUTTON
-            if st.button("Vote", key=f"vote_{p['id']}", use_container_width=True):
-
-                selected_list = selected if isinstance(selected, list) else [selected]
-
-                # ❌ Prevent empty vote
-                if not selected_list or selected_list == [None]:
-                    st.warning("Please select an option")
-                else:
-                    # ✅ Convert to indices
-                    option_indices = [
-                        p["options"].index(opt) for opt in selected_list
-                    ]
-
-                    vote_res = requests.post(
-                        f"{BASE_URL}/polls/{p['id']}/vote",
-                        json={"option_indices": option_indices},
-                        headers={"Authorization": f"Bearer {st.session_state['token']}"}
-                    )
-
-                    if vote_res.status_code == 200:
-                        # ✅ Reset state (important)
-                        st.session_state.pop(f"poll_multi_{p['id']}", None)
-                        st.session_state.pop(f"poll_single_{p['id']}", None)
-
-                        st.success("Vote recorded ✅")
-                        st.rerun()
-                    else:
-                        st.error("Failed to vote")
-                        st.write(vote_res.text)
 
             # ✅ RESULTS
             result_res = requests.get(

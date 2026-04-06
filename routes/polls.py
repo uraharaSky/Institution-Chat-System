@@ -13,8 +13,10 @@ poll_bp = Blueprint('poll', __name__)
 @poll_bp.route('/', methods=['POST'])
 @jwt_required()
 def create_poll():
-    user_id = int(get_jwt_identity())
 
+    from utils.notification import create_notification
+
+    user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
 
     # 🔒 Only faculty or CR
@@ -22,23 +24,40 @@ def create_poll():
         return jsonify({"msg": "Not allowed"}), 403
 
     data = request.get_json()
-    print("RAW DATA:", data)
-    print("QUESTION:", data.get("question"))
-    print("OPTIONS:", data.get("options"))
-    print("TYPE OPTIONS:", type(data.get("options")))
+
     question = data.get("question")
-    options = data.get("options")  # list
+    options = data.get("options")
 
     if not question or not options or len(options) < 2:
         return jsonify({"msg": "Invalid poll data"}), 400
 
+    # ✅ Create poll
     poll = Poll(
         question=question,
-        options=data.get("options"),
+        options=options,
         created_by=user_id
     )
 
     db.session.add(poll)
+    db.session.flush()   # 🔥 get poll.id without commit
+
+    # =========================
+    # 🔔 NOTIFICATIONS
+    # =========================
+
+    students = User.query.filter(User.role == "student").all()
+
+    for s in students:
+        create_notification(
+            s.id,
+            "New Poll",
+            f"{question}",
+            "poll",
+            ref_id=poll.id,
+            ref_type="poll"
+        )
+
+    # ✅ single commit
     db.session.commit()
 
     return jsonify({
@@ -46,10 +65,13 @@ def create_poll():
         "poll_id": poll.id
     }), 201
 
+
 # voting in poll
 @poll_bp.route('/<int:poll_id>/vote', methods=['POST'])
 @jwt_required()
 def vote_poll(poll_id):
+
+    from utils.notification import create_notification
 
     user_id = int(get_jwt_identity())
     data = request.get_json()
@@ -64,16 +86,16 @@ def vote_poll(poll_id):
     if not option_indices or not isinstance(option_indices, list):
         return jsonify({"msg": "Invalid input"}), 400
 
-    # ✅ Validate indices range
+    # ✅ Validate indices
     for idx in option_indices:
         if not isinstance(idx, int) or idx < 0 or idx >= len(poll.options):
             return jsonify({"msg": f"Invalid option index: {idx}"}), 400
 
-    # ✅ If single select, restrict
+    # ✅ Single select restriction
     if not poll.multi_select and len(option_indices) > 1:
         return jsonify({"msg": "Only one option allowed"}), 400
 
-    # 🧹 Remove old votes (important)
+    # 🧹 Remove old votes
     Vote.query.filter_by(
         poll_id=poll_id,
         user_id=user_id
@@ -88,9 +110,24 @@ def vote_poll(poll_id):
         )
         db.session.add(vote)
 
+    # =========================
+    # 🔔 NOTIFY POLL CREATOR
+    # =========================
+
+    if poll.created_by != user_id:
+        create_notification(
+            poll.created_by,
+            "Poll Update",
+            "Someone voted on your poll",
+            "poll",
+            ref_id=poll_id,
+            ref_type="poll"
+        )
+
     db.session.commit()
 
     return jsonify({"msg": "Vote recorded"}), 200
+
 # poll results
 
 
