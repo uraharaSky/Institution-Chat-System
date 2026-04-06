@@ -86,13 +86,3 @@ models.py
 extensions.py
 app.py
 requirement.txt
-
----
-
-## ⚙️ Installation & Setup 
-
-```bash
-git clone https://github.com/uraharaSky/Institution-Chat-System.git
-cd Institution-Chat-System
-pip install -r requirement.txt
-python app.py
