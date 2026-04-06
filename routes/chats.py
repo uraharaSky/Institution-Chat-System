@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, current_user
 from datetime import datetime
 
-from models import db, User, Message
+from models import db, User, Message, Group, GroupMessage, GroupMember
 
 chat_bp = Blueprint("chat", __name__)
 
@@ -56,6 +56,7 @@ def send_message():
     # 🔑 Create consistent chat_id
     chat_id = f"{min(sender_id, receiver_id)}_{max(sender_id, receiver_id)}"
 
+
     msg = Message(
         sender_id=sender_id,
         receiver_id=receiver_id,
@@ -83,6 +84,8 @@ def get_messages(other_user_id):
 
     result = []
 
+
+
     for m in messages:
         result.append({
             "id": m.id,
@@ -94,3 +97,4 @@ def get_messages(other_user_id):
         })
 
     return jsonify(result), 200
+

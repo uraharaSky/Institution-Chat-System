@@ -267,163 +267,273 @@ def student_dashboard():
 
         st.subheader("💬 Chat System")
 
-        # 🔐 Headers
         headers = {
             "Authorization": f"Bearer {st.session_state['token']}"
         }
 
-        # 🔧 Initialize session state
-        if "auto_refresh" not in st.session_state:
-            st.session_state["auto_refresh"] = True
+        # =========================
+        # 🔧 SESSION INIT
+        # =========================
+        st.session_state.setdefault("chat_user", None)
+        st.session_state.setdefault("active_group", None)
+        st.session_state.setdefault("just_sent", False)
+        st.session_state.setdefault("just_sent", False)
+        st.session_state.setdefault("chat_input", "")
+        st.session_state.setdefault("creating_group", False)
+        st.session_state.setdefault("auto_refresh", True)
 
-        if "chat_user" not in st.session_state:
-            st.session_state["chat_user"] = None
+        # =========================
+        # 📐 LAYOUT (SIDEBAR + CHAT)
+        # =========================
+        col1, col2 = st.columns([1, 2])
 
-        if "chat_input" not in st.session_state:
-            st.session_state["chat_input"] = ""
+        # =========================
+        # 📂 LEFT PANEL (Chats List)
+        # =========================
+        with col1:
 
+            st.write("### 💬 Chats")
 
+            # ➕ Create Group
+            if st.button("➕ New Group"):
+                st.session_state["creating_group"] = True
 
-        # 👥 Fetch users
-        res = requests.get(f"{BASE_URL_Chat}/chat/users", headers=headers)
+            # 👥 Fetch users
+            users_res = requests.get(f"{BASE_URL_Chat}/chat/users", headers=headers)
+            users = users_res.json() if users_res.status_code == 200 else []
 
-        if res.status_code != 200:
-            st.error(f"Error {res.status_code}: {res.text}")
-        else:
-            users = res.json()
+            # 👥 Fetch groups
+            groups_res = requests.get(f"{BASE_URL_Chat}/groups/my", headers=headers)
+            groups = groups_res.json() if groups_res.status_code == 200 else []
 
-            # 🔍 SEARCH BAR
-            search_query = st.text_input("🔍 Search users", key="user_search")
+            # =========================
+            # 🆕 CREATE GROUP UI
+            # =========================
+            if st.session_state.get("creating_group"):
 
-            st.write("### 👥 Start a Conversation")
+                st.write("#### 🆕 Create Group")
 
-            # 🔍 Filter users
-            filtered_users = [
-                user for user in users
-                if search_query.lower() in user["name"].lower()
-            ]
+                group_name = st.text_input("Group Name")
 
-            if not filtered_users:
-                st.info("No users found")
+                user_options = {f"{u['name']}": u["id"] for u in users}
+                selected_users = st.multiselect("Members", list(user_options.keys()))
 
-            # 📌 Select user
-            for idx, user in enumerate(filtered_users):
-                if st.button(
-                        f"{user['name']} ({user['role']})",
-                        key=f"user_{user['id']}_{idx}"):
-
-                    # 🔥 Reset chat-related state
-                    st.session_state["chat_user"] = user
-                    st.session_state["chat_input"] = ""   # clear old message
-                    st.session_state.pop("last_sent", None)
-                    st.rerun()
-
-        # 💬 If user selected → open chat
-        if "chat_user" in st.session_state:
-
-            selected_user = st.session_state.get("chat_user")
-
-            if selected_user:
-
-                st.divider()
-                st.write(f"## 💬 Chat with {selected_user['name']}")
-
-
-                # 📥 Fetch messages
-                messages_res = requests.get(
-                    f"{BASE_URL_Chat}/chat/messages/{selected_user['id']}",
-                    headers=headers
-                )
-                st.empty()
-                if messages_res.status_code != 200:
-                    st.error("Failed to load messages")
-                else:
-                    messages = messages_res.json()
-
-                    # 💬 Display messages (cleaner)
-                    for msg in messages:
-                        if msg["sender_id"] == int(st.session_state["user_id"]):
-                            st.markdown(
-                                f"""
-                            <div style='display:flex; justify-content:flex-end;'>
-                                <div style='
-                                    background:#25D366;
-                                    color:white;
-                                    padding:8px 12px;
-                                    border-radius:15px;
-                                    max-width:60%;
-                                    margin:5px;
-                                    word-wrap:break-word;
-                                '>
-                                    <b>You</b><br>
-                                    {msg['content']}<br>
-                                    <small style='opacity:0.8'>{msg['timestamp']}</small>
-                                </div>
-                            </div>
-                            """,
-                                unsafe_allow_html=True
-                            )
-                        else:
-                            st.markdown(
-                                f"""
-                            <div style='display:flex; justify-content:flex-start;'>
-                                <div style='
-                                    background:#E5E5EA;
-                                    color:black;
-                                    padding:8px 12px;
-                                    border-radius:15px;
-                                    max-width:60%;
-                                    margin:5px;
-                                    word-wrap:break-word;
-                                '>
-                                    <b>{selected_user['name']}</b><br>
-                                    {msg['content']}<br>
-                                    <small style='opacity:0.6'>{msg['timestamp']}</small>
-                                </div>
-                            </div>
-                            """,
-                                unsafe_allow_html=True
-                            )
-
-                st.divider()
-
-                # ✉️ Send message
-                def send_message_callback(selected_user, headers):
-
-                    msg = st.session_state.get("chat_input", "")
-
-                    if not msg.strip():
-                        st.warning("Message cannot be empty")
-                        return
+                if st.button("Create"):
+                    member_ids = [user_options[name] for name in selected_users]
 
                     res = requests.post(
-                        f"{BASE_URL_Chat}/chat/send",
-                        json={
-                            "receiver_id": selected_user["id"],
-                            "content": msg
-                        },
+                        f"{BASE_URL_Chat}/groups/create",
+                        json={"name": group_name, "members": member_ids},
                         headers=headers
                     )
 
                     if res.status_code == 200:
-                        st.session_state["chat_input"] = ""  # ✅ clear input
+                        st.success("Group created ✅")
+                        st.session_state["creating_group"] = False
+                        st.rerun()
                     else:
-                        st.error("Failed to send message")
-                # ✉️ Input box
-                st.text_input("Type a message", key="chat_input")
+                        st.error(res.text)
 
-                # 📤 Send button
-                st.button(
-                    "Send",
-                    key="send_msg",
-                    on_click=send_message_callback,
-                    args=(selected_user, headers)
-    )
-                # 🔄 Auto refresh ONLY when chat open
-                if selected_user in st.session_state and st.session_state["auto_refresh"]:
-                    time.sleep(2)
+            st.divider()
+
+            # =========================
+            # 👥 GROUP LIST
+            # =========================
+            st.write("#### 👥 Groups")
+
+            for group in groups:
+
+                label = group["name"]
+
+                active_chat = st.session_state.get("active_chat")
+
+                if active_chat and active_chat["type"] == "group" and active_chat["data"]["id"] == group["id"]:
+                    label = f"🟢 {label}"
+
+                if st.button(label, key=f"group_{group['id']}"):
+
+                    st.session_state["active_chat"] = {
+                        "type": "group",
+                        "data": group
+                    }
+
+                    st.session_state["chat_input"] = ""
                     st.rerun()
 
+            st.divider()
+
+            # =========================
+            # 👤 USER LIST
+            # =========================
+            st.write("#### 👤 Users")
+
+            search = st.text_input("Search")
+
+            filtered_users = [
+                u for u in users if search.lower() in u["name"].lower()
+            ]
+
+            for idx, user in enumerate(filtered_users):
+
+                label = f"{user['name']} ({user['role']})"
+
+                active_chat = st.session_state.get("active_chat")
+
+                if active_chat and active_chat["type"] == "user" and active_chat["data"]["id"] == user["id"]:
+                    label += " 🟢"
+
+                if st.button(label, key=f"user_{user['id']}_{idx}"):
+
+                    st.session_state["active_chat"] = {
+                        "type": "user",
+                        "data": user
+                    }
+
+                    st.session_state["chat_input"] = ""
+                    st.rerun()
+
+        # =========================
+        # 💬 RIGHT PANEL (CHAT AREA)
+        # =========================
+        with col2:
+
+            active_chat = st.session_state.get("active_chat")
+
+            if active_chat:
+
+                chat_type = active_chat["type"]
+                chat_data = active_chat["data"]
+
+                st.divider()
+
+                # =========================
+                # 👥 GROUP CHAT
+                # =========================
+                if chat_type == "group":
+
+                    st.write(f"## 👥 {chat_data['name']}")
+
+                    res = requests.get(
+                        f"{BASE_URL_Chat}/groups/messages/{chat_data['id']}",
+                        headers=headers
+                    )
+
+                    if res.status_code != 200:
+                        st.error("Failed to load messages")
+                        st.stop()
+
+                    messages = res.json()
+
+                    # 🧾 Messages
+                    for msg in messages:
+                        is_me = msg["sender_id"] == int(st.session_state["user_id"])
+
+                        align = "flex-end" if is_me else "flex-start"
+                        bg = "#25D366" if is_me else "#2f3136"
+
+                        sender = "You" if is_me else msg.get("sender_name", "User")
+
+                        st.markdown(f"""
+                        <div style='display:flex; justify-content:{align};'>
+                            <div style='
+                                background:{bg};
+                                color:white;
+                                padding:10px;
+                                border-radius:10px;
+                                margin:5px;
+                                max-width:60%;
+                            '>
+                                <b>{sender}</b><br>
+                                {msg['content']}<br>
+                                <small>{msg['timestamp']}</small>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                    st.divider()
+
+                    # ✉️ SEND GROUP MESSAGE
+                    with st.form("group_form", clear_on_submit=True):
+
+                        msg = st.text_input("Type message")
+
+                        submitted = st.form_submit_button("Send")
+
+                        if submitted and msg.strip():
+
+                            requests.post(
+                                f"{BASE_URL_Chat}/groups/send",
+                                json={
+                                    "group_id": chat_data["id"],
+                                    "content": msg
+                                },
+                                headers=headers
+                            )
+
+                            st.session_state["just_sent"] = True
+                # =========================
+                # 💬 USER CHAT
+                # =========================
+                elif chat_type == "user":
+
+                    st.write(f"## 💬 {chat_data['name']}")
+
+                    res = requests.get(
+                        f"{BASE_URL_Chat}/chat/messages/{chat_data['id']}",
+                        headers=headers
+                    )
+
+                    if res.status_code != 200:
+                        st.error("Failed to load messages")
+                        st.stop()
+
+                    messages = res.json()
+
+                    for msg in messages:
+                        is_me = msg["sender_id"] == int(st.session_state["user_id"])
+
+                        align = "flex-end" if is_me else "flex-start"
+                        bg = "#25D366" if is_me else "#2f3136"
+
+                        sender = "You" if is_me else chat_data["name"]
+
+                        st.markdown(f"""
+                        <div style='display:flex; justify-content:{align};'>
+                            <div style='
+                                background:{bg};
+                                color:white;
+                                padding:10px;
+                                border-radius:10px;
+                                margin:5px;
+                                max-width:60%;
+                            '>
+                                <b>{sender}</b><br>
+                                {msg['content']}<br>
+                                <small>{msg['timestamp']}</small>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    st.divider()
+                    # ✉️ Send
+                    with st.form("user_form", clear_on_submit=True):
+                        msg = st.text_input("Type message")
+                        if st.form_submit_button("Send") and msg.strip():
+
+                            requests.post(
+                                f"{BASE_URL_Chat}/chat/send",
+                                json={
+                                    "receiver_id": chat_data["id"],
+                                    "content": msg
+                                },
+                                headers=headers)
+                            st.session_state["just_sent"] = True
+
+            else:
+                st.info("Select a chat to start messaging")
+
+            if st.session_state.get("just_sent"):
+                st.session_state["just_sent"] = False
+                st.rerun()
     # NOTICES
     elif menu == "Notices":
         res = requests.get(
@@ -528,145 +638,280 @@ def cr_dashboard():
             st.table(data)
 
     # CHAT
+    # CHAT
     elif menu == "Chat":
 
         import time
 
         st.subheader("💬 Chat System")
 
-        # 🔐 Headers
         headers = {
             "Authorization": f"Bearer {st.session_state['token']}"
         }
 
-        # 👥 Fetch users
-        res = requests.get(f"{BASE_URL_Chat}/chat/users", headers=headers)
+        # =========================
+        # 🔧 SESSION INIT
+        # =========================
+        st.session_state.setdefault("chat_user", None)
+        st.session_state.setdefault("active_group", None)
+        st.session_state.setdefault("just_sent", False)
+        st.session_state.setdefault("just_sent", False)
+        st.session_state.setdefault("chat_input", "")
+        st.session_state.setdefault("creating_group", False)
+        st.session_state.setdefault("auto_refresh", True)
 
-        if res.status_code != 200:
-            st.error(f"Error {res.status_code}: {res.text}")
-        else:
-            users = res.json()
+        # =========================
+        # 📐 LAYOUT (SIDEBAR + CHAT)
+        # =========================
+        col1, col2 = st.columns([1, 2])
 
-            # 🔍 SEARCH BAR
-            search_query = st.text_input("🔍 Search users", key="user_search")
+        # =========================
+        # 📂 LEFT PANEL (Chats List)
+        # =========================
+        with col1:
 
-            st.write("### 👥 Start a Conversation")
+            st.write("### 💬 Chats")
 
-            # 🔍 Filter users
+            # ➕ Create Group
+            if st.button("➕ New Group"):
+                st.session_state["creating_group"] = True
+
+            # 👥 Fetch users
+            users_res = requests.get(f"{BASE_URL_Chat}/chat/users", headers=headers)
+            users = users_res.json() if users_res.status_code == 200 else []
+
+            # 👥 Fetch groups
+            groups_res = requests.get(f"{BASE_URL_Chat}/groups/my", headers=headers)
+            groups = groups_res.json() if groups_res.status_code == 200 else []
+
+            # =========================
+            # 🆕 CREATE GROUP UI
+            # =========================
+            if st.session_state.get("creating_group"):
+
+                st.write("#### 🆕 Create Group")
+
+                group_name = st.text_input("Group Name")
+
+                user_options = {f"{u['name']}": u["id"] for u in users}
+                selected_users = st.multiselect("Members", list(user_options.keys()))
+
+                if st.button("Create"):
+                    member_ids = [user_options[name] for name in selected_users]
+
+                    res = requests.post(
+                        f"{BASE_URL_Chat}/groups/create",
+                        json={"name": group_name, "members": member_ids},
+                        headers=headers
+                    )
+
+                    if res.status_code == 200:
+                        st.success("Group created ✅")
+                        st.session_state["creating_group"] = False
+                        st.rerun()
+                    else:
+                        st.error(res.text)
+
+            st.divider()
+
+            # =========================
+            # 👥 GROUP LIST
+            # =========================
+            st.write("#### 👥 Groups")
+
+            for group in groups:
+
+                label = group["name"]
+
+                active_chat = st.session_state.get("active_chat")
+
+                if active_chat and active_chat["type"] == "group" and active_chat["data"]["id"] == group["id"]:
+                    label = f"🟢 {label}"
+
+                if st.button(label, key=f"group_{group['id']}"):
+
+                    st.session_state["active_chat"] = {
+                        "type": "group",
+                        "data": group
+                    }
+
+                    st.session_state["chat_input"] = ""
+                    st.rerun()
+
+            st.divider()
+
+            # =========================
+            # 👤 USER LIST
+            # =========================
+            st.write("#### 👤 Users")
+
+            search = st.text_input("Search")
+
             filtered_users = [
-                user for user in users
-                if search_query.lower() in user["name"].lower()
+                u for u in users if search.lower() in u["name"].lower()
             ]
 
-            if not filtered_users:
-                st.info("No users found")
+            for idx, user in enumerate(filtered_users):
 
-            # 📌 Select user
-            for user in filtered_users:
-                if st.button(f"{user['name']} ({user['role']})", key=f"user_{user['id']}"):
-                    st.session_state["chat_user"] = user
-                    st.rerun()  # 👈 important for instant switch
+                label = f"{user['name']} ({user['role']})"
 
-        # 💬 If user selected → open chat
-        if "chat_user" in st.session_state:
+                active_chat = st.session_state.get("active_chat")
 
-            selected_user = st.session_state["chat_user"]
+                if active_chat and active_chat["type"] == "user" and active_chat["data"]["id"] == user["id"]:
+                    label += " 🟢"
 
-            st.divider()
-            st.write(f"## 💬 Chat with {selected_user['name']}")
+                if st.button(label, key=f"user_{user['id']}_{idx}"):
 
-            # 📥 Fetch messages
-            messages_res = requests.get(
-                f"{BASE_URL_Chat}/chat/messages/{selected_user['id']}",
-                headers=headers
-            )
+                    st.session_state["active_chat"] = {
+                        "type": "user",
+                        "data": user
+                    }
 
-            if messages_res.status_code != 200:
-                st.error("Failed to load messages")
+                    st.session_state["chat_input"] = ""
+                    st.rerun()
+
+        # =========================
+        # 💬 RIGHT PANEL (CHAT AREA)
+        # =========================
+        with col2:
+
+            active_chat = st.session_state.get("active_chat")
+
+            if active_chat:
+
+                chat_type = active_chat["type"]
+                chat_data = active_chat["data"]
+
+                st.divider()
+
+                # =========================
+                # 👥 GROUP CHAT
+                # =========================
+                if chat_type == "group":
+
+                    st.write(f"## 👥 {chat_data['name']}")
+
+                    res = requests.get(
+                        f"{BASE_URL_Chat}/groups/messages/{chat_data['id']}",
+                        headers=headers
+                    )
+
+                    if res.status_code != 200:
+                        st.error("Failed to load messages")
+                        st.stop()
+
+                    messages = res.json()
+
+                    # 🧾 Messages
+                    for msg in messages:
+                        is_me = msg["sender_id"] == int(st.session_state["user_id"])
+
+                        align = "flex-end" if is_me else "flex-start"
+                        bg = "#25D366" if is_me else "#2f3136"
+
+                        sender = "You" if is_me else msg.get("sender_name", "User")
+
+                        st.markdown(f"""
+                        <div style='display:flex; justify-content:{align};'>
+                            <div style='
+                                background:{bg};
+                                color:white;
+                                padding:10px;
+                                border-radius:10px;
+                                margin:5px;
+                                max-width:60%;
+                            '>
+                                <b>{sender}</b><br>
+                                {msg['content']}<br>
+                                <small>{msg['timestamp']}</small>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                    st.divider()
+
+                    # ✉️ SEND GROUP MESSAGE
+                    with st.form("group_form", clear_on_submit=True):
+
+                        msg = st.text_input("Type message")
+
+                        submitted = st.form_submit_button("Send")
+
+                        if submitted and msg.strip():
+
+                            requests.post(
+                                f"{BASE_URL_Chat}/groups/send",
+                                json={
+                                    "group_id": chat_data["id"],
+                                    "content": msg
+                                },
+                                headers=headers
+                            )
+
+                            st.session_state["just_sent"] = True
+                # =========================
+                # 💬 USER CHAT
+                # =========================
+                elif chat_type == "user":
+
+                    st.write(f"## 💬 {chat_data['name']}")
+
+                    res = requests.get(
+                        f"{BASE_URL_Chat}/chat/messages/{chat_data['id']}",
+                        headers=headers
+                    )
+
+                    if res.status_code != 200:
+                        st.error("Failed to load messages")
+                        st.stop()
+
+                    messages = res.json()
+
+                    for msg in messages:
+                        is_me = msg["sender_id"] == int(st.session_state["user_id"])
+
+                        align = "flex-end" if is_me else "flex-start"
+                        bg = "#25D366" if is_me else "#2f3136"
+
+                        sender = "You" if is_me else chat_data["name"]
+
+                        st.markdown(f"""
+                        <div style='display:flex; justify-content:{align};'>
+                            <div style='
+                                background:{bg};
+                                color:white;
+                                padding:10px;
+                                border-radius:10px;
+                                margin:5px;
+                                max-width:60%;
+                            '>
+                                <b>{sender}</b><br>
+                                {msg['content']}<br>
+                                <small>{msg['timestamp']}</small>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    st.divider()
+                    # ✉️ Send
+                    with st.form("user_form", clear_on_submit=True):
+                        msg = st.text_input("Type message")
+                        if st.form_submit_button("Send") and msg.strip():
+
+                            requests.post(
+                                f"{BASE_URL_Chat}/chat/send",
+                                json={
+                                    "receiver_id": chat_data["id"],
+                                    "content": msg
+                                },
+                                headers=headers)
+                            st.session_state["just_sent"] = True
+
             else:
-                messages = messages_res.json()
+                st.info("Select a chat to start messaging")
 
-                # 💬 Display messages (cleaner)
-                for msg in messages:
-                    if msg["sender_id"] == int(st.session_state["user_id"]):
-                        st.markdown(
-                            f"""
-                            <div style='display:flex; justify-content:flex-end;'>
-                                <div style='
-                                    background:#25D366;
-                                    color:white;
-                                    padding:8px 12px;
-                                    border-radius:15px;
-                                    max-width:60%;
-                                    margin:5px;
-                                    word-wrap:break-word;
-                                '>
-                                    <b>You</b><br>
-                                    {msg['content']}<br>
-                                    <small style='opacity:0.8'>{msg['timestamp']}</small>
-                                </div>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
-                    else:
-                        st.markdown(
-                            f"""
-                            <div style='display:flex; justify-content:flex-start;'>
-                                <div style='
-                                    background:#E5E5EA;
-                                    color:black;
-                                    padding:8px 12px;
-                                    border-radius:15px;
-                                    max-width:60%;
-                                    margin:5px;
-                                    word-wrap:break-word;
-                                '>
-                                    <b>{selected_user['name']}</b><br>
-                                    {msg['content']}<br>
-                                    <small style='opacity:0.6'>{msg['timestamp']}</small>
-                                </div>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
-
-            st.divider()
-
-            # ✉️ Send message
-            if "chat_input" not in st.session_state:
-                st.session_state["chat_input"] = ""
-
-            new_msg = st.text_input("Type a message", key="chat_input")
-
-            col1, col2 = st.columns([5,1])
-
-            with col2:
-                if st.button("Send", key="send_msg"):
-
-                    if not new_msg.strip():
-                        st.warning("Message cannot be empty")
-
-                    else:
-                        send_res = requests.post(
-                            f"{BASE_URL_Chat}/chat/send",
-                            json={
-                                "receiver_id": selected_user["id"],
-                                "content": new_msg
-                            },
-                            headers=headers
-                        )
-
-                        if send_res.status_code == 200:
-                            st.session_state["chat_input"] = ""  # 🔥 FIX
-                            time.sleep(0.5)
-                            st.rerun()
-                        else:
-                            st.error("Failed to send message")
-
-            # 🔄 Auto refresh ONLY when chat open
-            time.sleep(2)
-            st.rerun()
+            if st.session_state.get("just_sent"):
+                st.session_state["just_sent"] = False
+                st.rerun()
     # NOTICES
 
     # ---------------- CREATE NOTICE ----------------
@@ -1146,89 +1391,280 @@ def faculty_dashboard():
             st.markdown("</div>", unsafe_allow_html=True)
 
         # CHAT
+    # CHAT
     elif menu == "Chat":
 
         import time
 
-
         st.subheader("💬 Chat System")
 
-        # 🔐 Headers
         headers = {
             "Authorization": f"Bearer {st.session_state['token']}"
         }
 
-        # 👥 Fetch users
-        res = requests.get(f"{BASE_URL_Chat}/chat/users", headers=headers)
+        # =========================
+        # 🔧 SESSION INIT
+        # =========================
+        st.session_state.setdefault("chat_user", None)
+        st.session_state.setdefault("active_group", None)
+        st.session_state.setdefault("just_sent", False)
+        st.session_state.setdefault("just_sent", False)
+        st.session_state.setdefault("chat_input", "")
+        st.session_state.setdefault("creating_group", False)
+        st.session_state.setdefault("auto_refresh", True)
 
-        if res.status_code != 200:
-            st.error("Failed to load users")
-        else:
-            users = res.json()
+        # =========================
+        # 📐 LAYOUT (SIDEBAR + CHAT)
+        # =========================
+        col1, col2 = st.columns([1, 2])
 
-            st.write("### 👥 Start a Conversation")
+        # =========================
+        # 📂 LEFT PANEL (Chats List)
+        # =========================
+        with col1:
 
-            # 📌 Select user
-            for user in users:
-                if st.button(f"{user['name']} ({user['role']})", key=f"user_{user['id']}"):
-                    st.session_state["chat_user"] = user
+            st.write("### 💬 Chats")
 
-        # 💬 If user selected → open chat
-        if "chat_user" in st.session_state:
+            # ➕ Create Group
+            if st.button("➕ New Group"):
+                st.session_state["creating_group"] = True
 
-            selected_user = st.session_state["chat_user"]
+            # 👥 Fetch users
+            users_res = requests.get(f"{BASE_URL_Chat}/chat/users", headers=headers)
+            users = users_res.json() if users_res.status_code == 200 else []
 
-            st.divider()
-            st.write(f"## 💬 Chat with {selected_user['name']}")
+            # 👥 Fetch groups
+            groups_res = requests.get(f"{BASE_URL_Chat}/groups/my", headers=headers)
+            groups = groups_res.json() if groups_res.status_code == 200 else []
 
-            # 📥 Fetch messages
-            messages_res = requests.get(
-                f"{BASE_URL_Chat}/chat/messages/{selected_user['id']}",
-                headers=headers
-            )
+            # =========================
+            # 🆕 CREATE GROUP UI
+            # =========================
+            if st.session_state.get("creating_group"):
 
-            if messages_res.status_code != 200:
-                st.error("Failed to load messages")
-            else:
-                messages = messages_res.json()
+                st.write("#### 🆕 Create Group")
 
-                # 💬 Display messages
-                for msg in messages:
-                    if msg["sender_id"] == int(st.session_state["user_id"]):
-                        st.markdown(f"🟢 **You:** {msg['content']}  \n🕒 {msg['timestamp']}")
-                    else:
-                        st.markdown(f"🔵 **{selected_user['name']}:** {msg['content']}  \n🕒 {msg['timestamp']}")
+                group_name = st.text_input("Group Name")
 
-            st.divider()
+                user_options = {f"{u['name']}": u["id"] for u in users}
+                selected_users = st.multiselect("Members", list(user_options.keys()))
 
-            # ✉️ Send message
-            new_msg = st.text_input("Type a message", key="chat_input")
+                if st.button("Create"):
+                    member_ids = [user_options[name] for name in selected_users]
 
-            if st.button("Send", key="send_msg"):
-
-                if not new_msg.strip():
-                    st.warning("Message cannot be empty")
-
-                else:
-                    send_res = requests.post(
-                        f"{BASE_URL_Chat}/chat/send",
-                        json={
-                            "receiver_id": selected_user["id"],
-                            "content": new_msg
-                        },
+                    res = requests.post(
+                        f"{BASE_URL_Chat}/groups/create",
+                        json={"name": group_name, "members": member_ids},
                         headers=headers
                     )
 
-                    if send_res.status_code == 200:
-                        st.success("Message sent ✅")
-                        time.sleep(1)
+                    if res.status_code == 200:
+                        st.success("Group created ✅")
+                        st.session_state["creating_group"] = False
                         st.rerun()
                     else:
-                        st.error("Failed to send message")
+                        st.error(res.text)
 
-            # 🔄 Auto refresh (simulate real-time)
-            time.sleep(2)
-            st.rerun()
+            st.divider()
+
+            # =========================
+            # 👥 GROUP LIST
+            # =========================
+            st.write("#### 👥 Groups")
+
+            for group in groups:
+
+                label = group["name"]
+
+                active_chat = st.session_state.get("active_chat")
+
+                if active_chat and active_chat["type"] == "group" and active_chat["data"]["id"] == group["id"]:
+                    label = f"🟢 {label}"
+
+                if st.button(label, key=f"group_{group['id']}"):
+
+                    st.session_state["active_chat"] = {
+                        "type": "group",
+                        "data": group
+                    }
+
+                    st.session_state["chat_input"] = ""
+                    st.rerun()
+
+            st.divider()
+
+            # =========================
+            # 👤 USER LIST
+            # =========================
+            st.write("#### 👤 Users")
+
+            search = st.text_input("Search")
+
+            filtered_users = [
+                u for u in users if search.lower() in u["name"].lower()
+            ]
+
+            for idx, user in enumerate(filtered_users):
+
+                label = f"{user['name']} ({user['role']})"
+
+                active_chat = st.session_state.get("active_chat")
+
+                if active_chat and active_chat["type"] == "user" and active_chat["data"]["id"] == user["id"]:
+                    label += " 🟢"
+
+                if st.button(label, key=f"user_{user['id']}_{idx}"):
+
+                    st.session_state["active_chat"] = {
+                        "type": "user",
+                        "data": user
+                    }
+
+                    st.session_state["chat_input"] = ""
+                    st.rerun()
+
+        # =========================
+        # 💬 RIGHT PANEL (CHAT AREA)
+        # =========================
+        with col2:
+
+            active_chat = st.session_state.get("active_chat")
+
+            if active_chat:
+
+                chat_type = active_chat["type"]
+                chat_data = active_chat["data"]
+
+                st.divider()
+
+                # =========================
+                # 👥 GROUP CHAT
+                # =========================
+                if chat_type == "group":
+
+                    st.write(f"## 👥 {chat_data['name']}")
+
+                    res = requests.get(
+                        f"{BASE_URL_Chat}/groups/messages/{chat_data['id']}",
+                        headers=headers
+                    )
+
+                    if res.status_code != 200:
+                        st.error("Failed to load messages")
+                        st.stop()
+
+                    messages = res.json()
+
+                    # 🧾 Messages
+                    for msg in messages:
+                        is_me = msg["sender_id"] == int(st.session_state["user_id"])
+
+                        align = "flex-end" if is_me else "flex-start"
+                        bg = "#25D366" if is_me else "#2f3136"
+
+                        sender = "You" if is_me else msg.get("sender_name", "User")
+
+                        st.markdown(f"""
+                        <div style='display:flex; justify-content:{align};'>
+                            <div style='
+                                background:{bg};
+                                color:white;
+                                padding:10px;
+                                border-radius:10px;
+                                margin:5px;
+                                max-width:60%;
+                            '>
+                                <b>{sender}</b><br>
+                                {msg['content']}<br>
+                                <small>{msg['timestamp']}</small>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                    st.divider()
+
+                    # ✉️ SEND GROUP MESSAGE
+                    with st.form("group_form", clear_on_submit=True):
+
+                        msg = st.text_input("Type message")
+
+                        submitted = st.form_submit_button("Send")
+
+                        if submitted and msg.strip():
+
+                            requests.post(
+                                f"{BASE_URL_Chat}/groups/send",
+                                json={
+                                    "group_id": chat_data["id"],
+                                    "content": msg
+                                },
+                                headers=headers
+                            )
+
+                            st.session_state["just_sent"] = True
+                # =========================
+                # 💬 USER CHAT
+                # =========================
+                elif chat_type == "user":
+
+                    st.write(f"## 💬 {chat_data['name']}")
+
+                    res = requests.get(
+                        f"{BASE_URL_Chat}/chat/messages/{chat_data['id']}",
+                        headers=headers
+                    )
+
+                    if res.status_code != 200:
+                        st.error("Failed to load messages")
+                        st.stop()
+
+                    messages = res.json()
+
+                    for msg in messages:
+                        is_me = msg["sender_id"] == int(st.session_state["user_id"])
+
+                        align = "flex-end" if is_me else "flex-start"
+                        bg = "#25D366" if is_me else "#2f3136"
+
+                        sender = "You" if is_me else chat_data["name"]
+
+                        st.markdown(f"""
+                        <div style='display:flex; justify-content:{align};'>
+                            <div style='
+                                background:{bg};
+                                color:white;
+                                padding:10px;
+                                border-radius:10px;
+                                margin:5px;
+                                max-width:60%;
+                            '>
+                                <b>{sender}</b><br>
+                                {msg['content']}<br>
+                                <small>{msg['timestamp']}</small>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    st.divider()
+                    # ✉️ Send
+                    with st.form("user_form", clear_on_submit=True):
+                        msg = st.text_input("Type message")
+                        if st.form_submit_button("Send") and msg.strip():
+
+                            requests.post(
+                                f"{BASE_URL_Chat}/chat/send",
+                                json={
+                                    "receiver_id": chat_data["id"],
+                                    "content": msg
+                                },
+                                headers=headers)
+                            st.session_state["just_sent"] = True
+
+            else:
+                st.info("Select a chat to start messaging")
+
+            if st.session_state.get("just_sent"):
+                st.session_state["just_sent"] = False
+                st.rerun()
 # ---------------- ADMIN ----------------
 def admin_dashboard():
     sidebar()

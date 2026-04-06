@@ -64,3 +64,20 @@ class Message(db.Model):
     status = db.Column(db.String(20), default="sent")  # sent/delivered/read
     delivered = db.Column(db.Boolean, default=False)
     seen = db.Column(db.Boolean, default=False)
+
+class Group(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
+    created_by = db.Column(db.Integer)
+
+class GroupMember(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer)
+    user_id = db.Column(db.Integer)
+
+class GroupMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer)
+    sender_id = db.Column(db.Integer)
+    content = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)

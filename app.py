@@ -7,6 +7,7 @@ from routes.notices import notice_bp
 from routes.polls import poll_bp
 from routes.admin import admin_bp
 from routes.auth import auth_bp
+from routes.groups import groups_bp
 import requests
 
 def create_app():
@@ -35,6 +36,9 @@ def create_app():
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
 
     app.register_blueprint(chat_bp, url_prefix="/chat")
+
+
+    app.register_blueprint(groups_bp)
 
 
     return app
