@@ -85,9 +85,11 @@ An institutional communication system built with Flask, enabling secure messagin
 models.py
 extensions.py
 app.py
-requirement.txt 
+requirement.txt
 
-## Installation & Setup 
+---
+
+## ⚙️ Installation & Setup 
 
 ```bash
 git clone https://github.com/uraharaSky/Institution-Chat-System.git
