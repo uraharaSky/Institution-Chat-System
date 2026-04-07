@@ -1,5 +1,6 @@
 import app
 from flask import Flask
+from flask import cors
 from extensions import db, bcrypt, jwt
 from routes.attendance import attendance_bp
 from routes.chats import chat_bp
@@ -15,6 +16,7 @@ import requests
 def create_app():
     app = Flask(__name__)
 
+
     #configuration
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -25,6 +27,7 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     bcrypt.init_app(app)
+    cors(app)
 
     # Register Blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
