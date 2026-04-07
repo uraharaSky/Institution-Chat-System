@@ -36,13 +36,27 @@ def register():
         role=role
     )
 
-    # Save to DB
-    db.session.add(new_user)
-    db.session.commit()
+    existing_user = User.query.filter_by(email=email).first()
 
-    return jsonify({
-        "msg": "User registered successfully"
-    }), 201
+    print("🔍 Checking email:", email)
+    print("🔍 Found user:", existing_user)
+
+    if existing_user:
+        return jsonify({"msg": "User already exists"}), 400
+
+    # Save to DB
+    try:
+        db.session.add(new_user)
+        db.session.commit()
+        print("User object:", new_user.name, new_user.email, new_user.role)
+        print("✅ User committed:", new_user.id)
+
+    except Exception as e:
+        db.session.rollback()
+        print("❌ ERROR:", e)
+        return jsonify({"error": str(e)}), 500
+
+
 
 # Login User API
 

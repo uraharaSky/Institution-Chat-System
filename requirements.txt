@@ -6,3 +6,4 @@ Flask-Cors==4.0.1
 gunicorn==21.2.0
 requests
 streamlit
+psycopg2-binary

@@ -256,11 +256,8 @@ def auth_layout():
                     "role": role
                 })
 
-                if res.status_code == 201:
-                    st.success("Registered successfully ✅")
-                else:
-                    st.error("Registration failed ❌")
-                    st.write(res.text)
+                st.write("STATUS:", res.status_code)
+                st.write("RESPONSE:", res.text)
 
             if st.button("⬅ Back", key="register_back"):
                 st.session_state.page = "welcome"
