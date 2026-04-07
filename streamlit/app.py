@@ -11,6 +11,62 @@ st.set_page_config(
     layout="wide"
 )
 
+st.markdown("""
+<style>
+div[data-testid="column"] div.stButton > button {
+    height: 90px;
+    border-radius: 14px;
+    transition: all 0.25s ease;
+    margin-bottom: 12px;
+    font-weight:500;
+}
+div.stButton > button:hover {
+    transform: translateY(-4px);
+    border: 1px solid #7C5CFF;
+    box-shadow: 0 8px 25px rgba(124, 92, 255, 0.35);
+}
+</style>
+""", unsafe_allow_html=True)
+
+# =========================
+# 🎴 CENTER DASHBOARD NAV
+# =========================
+def render_dashboard(menu_options):
+
+    if "menu" not in st.session_state:
+        st.session_state.menu = "HOME"
+
+    # 🏠 HOME SCREEN
+    if st.session_state.menu == "HOME":
+
+        st.markdown("""
+        <div style='
+            text-align:center;
+            font-size:28px;
+            font-weight:600;
+            margin-bottom:25px;
+        '>
+        🚀 UniConnect Dashboard
+        </div>
+        """, unsafe_allow_html=True)
+
+        cols = st.columns(2)
+
+        for i, (label, value) in enumerate(menu_options):
+            with cols[i % 2]:
+                if st.button(label,key=f"card_{value}_{st.session_state.get('role','')}", use_container_width=True):
+                    st.session_state.menu = value
+                    st.rerun()
+
+        st.stop()
+
+    # ⬅ BACK BUTTON
+    if st.button("⬅ Back to Dashboard"):
+        st.session_state.menu = "HOME"
+        st.rerun()
+
+    return st.session_state.menu
+
 # ---------------- SESSION STATE ----------------
 if "token" not in st.session_state:
     st.session_state["token"] = None
@@ -212,16 +268,30 @@ def auth_layout():
 
         # 👇 END SCROLL AREA
         st.markdown("</div>", unsafe_allow_html=True)
+
 # ---------------- SIDEBAR ----------------
 def sidebar():
-    role = st.session_state.get("role", "")
-    st.sidebar.markdown(f"👤 **Role:** {role}")
-    st.sidebar.markdown("---")
 
-    if st.sidebar.button("🚪 Logout", key="logout"):
+    role = st.session_state.get("role", "")
+
+    # 🎨 Styled container
+    st.sidebar.markdown("""
+    <div style="
+        padding: 15px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        margin-bottom: 15px;
+    ">
+        <div style="font-size:14px; color:#9CA3AF;">Logged in as</div>
+        <div style="font-size:18px; font-weight:600;">👤 {}</div>
+    </div>
+    """.format(role.capitalize()), unsafe_allow_html=True)
+
+    # 🔥 Logout button (styled)
+    if st.sidebar.button("🚪 Logout", key="logout", use_container_width=True):
         st.session_state.clear()
         st.rerun()
-
 
 # ---------------- STUDENT DASHBOARD ----------------
 def student_dashboard():
@@ -313,26 +383,18 @@ def student_dashboard():
     st.divider()
 
     # =========================
-    # 📌 FIXED MENU STATE
+    # 🎴 CENTER DASHBOARD NAV
     # =========================
 
-    menu_options = ["Mark Attendance", "My Attendance","Chat", "Notices", "Polls"]
+    menu_options = [
+        ("📡 Mark Attendance", "Mark Attendance"),
+        ("📊 My Attendance", "My Attendance"),
+        ("💬 Chat", "Chat"),
+        ("📢 Notices", "Notices"),
+        ("🧠 Polls", "Polls"),
+    ]
 
-    if "menu" not in st.session_state:
-        st.session_state.menu = menu_options[0]
-
-    def update_menu():
-        st.session_state.menu = st.session_state.menu_select
-
-    st.sidebar.selectbox(
-        "Menu",
-        menu_options,
-        index=menu_options.index(st.session_state.menu),
-        key="menu_select",
-        on_change=update_menu
-    )
-
-    menu = st.session_state.menu
+    menu = render_dashboard(menu_options)
 
     # MARK ATTENDANCE
     if menu == "Mark Attendance":
@@ -677,16 +739,17 @@ def student_dashboard():
                 choice = st.multiselect(
                     "Select options",
                     p["options"],
-                    key=f"poll_{p['id']}"
+                    key=f"poll_multi_{p['id']}"
                 )
             else:
                 choice = st.radio(
                     "Choose option",
                     p["options"],
-                    key=f"poll_{p['id']}"
+                    key=f"poll_single_{p['id']}"
                 )
 
-            if st.button("Vote", key=f"vote_{p['id']}"):
+            if st.button("Vote",
+                         key=f"vote_{p['id']}"):
 
                 selected = choice if isinstance(choice, list) else [choice]
 
@@ -708,14 +771,14 @@ def student_dashboard():
 # ---------------- CR DASHBOARD ----------------
 def cr_dashboard():
     sidebar()
-#
+    #
     st.markdown("## 👨‍🎓 Class Representative Dashboard")
     st.divider()
-#
-#     menu = st.sidebar.selectbox(
-#         "Menu",
-#         ["Mark Attendance", "My Attendance","Chat", "Create Notice","View Notices","Create Poll", "View Polls"]
-#     )
+    #
+    #     menu = st.sidebar.selectbox(
+    #         "Menu",
+    #         ["Mark Attendance", "My Attendance","Chat", "Create Notice","View Notices","Create Poll", "View Polls"]
+    #     )
     import time
 
     if "notif_refresh" not in st.session_state:
@@ -801,28 +864,20 @@ def cr_dashboard():
     st.divider()
 
     # =========================
-    # 📌 FIXED MENU STATE
+    # 🎴 CENTER DASHBOARD NAV
     # =========================
 
-    menu_options = ["Mark Attendance", "My Attendance","Chat", "Create Notice","View Notices","Create Poll", "View Polls"]
+    menu_options = [
+        ("📡 Mark Attendance", "Mark Attendance"),
+        ("📊 My Attendance", "My Attendance"),
+        ("💬 Chat", "Chat"),
+        ("📝 Create Notice", "Create Notice"),
+        ("📢 View Notices", "View Notices"),
+        ("🧠 Create Poll", "Create Poll"),
+        ("📊 View Polls", "View Polls"),
+    ]
 
-    if "menu" not in st.session_state:
-        st.session_state.menu = menu_options[0]
-
-    def update_menu():
-        st.session_state.menu = st.session_state.menu_select
-
-    index=menu_options.index(st.session_state.menu) if st.session_state.menu in menu_options else 0
-
-    st.sidebar.selectbox(
-        "Menu",
-        menu_options,
-        index = index,
-        key="menu_select",
-        on_change=update_menu
-    )
-
-    menu = st.session_state.menu
+    menu = render_dashboard(menu_options)
 
     # MARK ATTENDANCE
     if menu == "Mark Attendance":
@@ -869,7 +924,6 @@ def cr_dashboard():
         # =========================
         st.session_state.setdefault("chat_user", None)
         st.session_state.setdefault("active_group", None)
-        st.session_state.setdefault("just_sent", False)
         st.session_state.setdefault("just_sent", False)
         st.session_state.setdefault("chat_input", "")
         st.session_state.setdefault("creating_group", False)
@@ -1140,7 +1194,16 @@ def cr_dashboard():
                 json={"title": title, "content": content},
                 headers={"Authorization": f"Bearer {st.session_state['token']}"}
             )
-            st.success("Notice posted ✅")
+
+            if res.status_code == 201:
+                st.success("Notice posted ✅")
+
+            elif res.status_code == 400:
+                st.warning("Fill all fields")   # 👈 what you wanted
+
+            else:
+                st.error("Failed to post notice")
+                st.write(res.text)
 
     elif menu == "View Notices":
         res = requests.get(
@@ -1185,7 +1248,7 @@ def cr_dashboard():
                 st.warning("Fill all fields")
                 return
 
-            option_list = [opt.strip() for opt in options.split(",")]
+            option_list = [opt.strip() for opt in options.split(",") if opt.strip()]
 
             res = requests.post(
                 f"{BASE_URL}/polls/",
@@ -1293,20 +1356,20 @@ def faculty_dashboard():
     st.markdown("## 👨‍🏫 Faculty Dashboard")
     st.caption("Manage sessions, notices, and polls")
     st.divider()
-#
-#     menu = st.sidebar.selectbox(
-#         "Menu",
-#         [
-#             "Start Session",
-#             "Sessions",
-#             "Live Attendance",
-#             "Create Notice",
-#             "View Notices",
-#             "Create Poll",
-#             "View Polls",
-#             "Chat"
-#         ]
-#     )
+    #
+    #     menu = st.sidebar.selectbox(
+    #         "Menu",
+    #         [
+    #             "Start Session",
+    #             "Sessions",
+    #             "Live Attendance",
+    #             "Create Notice",
+    #             "View Notices",
+    #             "Create Poll",
+    #             "View Polls",
+    #             "Chat"
+    #         ]
+    #     )
 
     import time
 
@@ -1393,37 +1456,21 @@ def faculty_dashboard():
     st.divider()
 
     # =========================
-    # 📌 FIXED MENU STATE
+    # 🎴 CENTER DASHBOARD NAV
     # =========================
 
-    menu_options = ["Start Session",
-                "Sessions",
-                "Live Attendance",
-                "Create Notice",
-                "View Notices",
-                "Create Poll",
-                "View Polls",
-                "Chat"]
+    menu_options = [
+        ("🚀 Start Session", "Start Session"),
+        ("📡 Sessions", "Sessions"),
+        ("📊 Live Attendance", "Live Attendance"),
+        ("📝 Create Notice", "Create Notice"),
+        ("📢 View Notices", "View Notices"),
+        ("🧠 Create Poll", "Create Poll"),
+        ("📊 View Polls", "View Polls"),
+        ("💬 Chat", "Chat"),
+    ]
 
-    if "menu" not in st.session_state:
-        st.session_state.menu = menu_options[0]
-
-    def update_menu():
-        st.session_state.menu = st.session_state.menu_select
-
-    index=menu_options.index(st.session_state.menu) if st.session_state.menu in menu_options else 0
-
-    st.sidebar.selectbox(
-        "Menu",
-        menu_options,
-        index = index,
-        key="menu_select",
-        on_change=update_menu
-    )
-
-    menu = st.session_state.menu
-
-
+    menu = render_dashboard(menu_options)
 
     # ---------------- START SESSION ----------------
     if menu == "Start Session":
@@ -1571,7 +1618,15 @@ def faculty_dashboard():
                 json={"title": title, "content": content},
                 headers={"Authorization": f"Bearer {st.session_state['token']}"}
             )
-            st.success("Notice posted ✅")
+            if res.status_code == 201:
+                st.success("Notice posted ✅")
+
+            elif res.status_code == 400:
+                st.warning("Fill all fields")   # 👈 what you wanted
+
+            else:
+                st.error("Failed to post notice")
+                st.write(res.text)
 
     # ---------------- VIEW NOTICE ----------------
     elif menu == "View Notices":
@@ -1741,7 +1796,7 @@ def faculty_dashboard():
                     p["options"],
                     index=None,
                     key=f"poll_single_{p['id']}"
-    )
+                )
 
 
             # ✅ RESULTS
@@ -1789,7 +1844,6 @@ def faculty_dashboard():
         # =========================
         st.session_state.setdefault("chat_user", None)
         st.session_state.setdefault("active_group", None)
-        st.session_state.setdefault("just_sent", False)
         st.session_state.setdefault("just_sent", False)
         st.session_state.setdefault("chat_input", "")
         st.session_state.setdefault("creating_group", False)
@@ -2047,6 +2101,7 @@ def faculty_dashboard():
             if st.session_state.get("just_sent"):
                 st.session_state["just_sent"] = False
                 st.rerun()
+
 # ---------------- ADMIN ----------------
 def admin_dashboard():
     sidebar()
@@ -2054,10 +2109,16 @@ def admin_dashboard():
     st.markdown("## 👑 Admin Dashboard")
     st.divider()
 
-    menu = st.sidebar.selectbox(
-        "Menu",
-        ["Users", "Summary"]
-    )
+    # =========================
+    # 🎴 CENTER DASHBOARD NAV
+    # =========================
+
+    menu_options = [
+        ("👥 Users", "Users"),
+        ("📊 Summary", "Summary"),
+    ]
+
+    menu = render_dashboard(menu_options)
 
     # ---------------- USERS ----------------
     if menu == "Users":
@@ -2094,14 +2155,13 @@ def admin_dashboard():
         st.markdown("## 📊 System Overview")
 
         # 🔥 METRICS
-        col1, col2, col3 = st.columns(3)
-        col4, col5 = st.columns(2)
+        cols = st.columns(5)
 
-        col1.metric("👥 Users", data["Total Users"])
-        col2.metric("📚 Sessions", data["Total Sessions"])
-        col3.metric("✅ Attendance", data["Total Attendance"])
-        col4.metric("📢 Notices", data["Total Notices"])
-        col5.metric("🗳️ Polls", data["Total Polls"])
+        cols[0].metric("👥 Users", data["Total Users"])
+        cols[1].metric("📚 Sessions", data["Total Sessions"])
+        cols[2].metric("✅ Attendance", data["Total Attendance"])
+        cols[3].metric("📢 Notices", data["Total Notices"])
+        cols[4].metric("🗳️ Polls", data["Total Polls"])
 
         st.divider()
 
@@ -2141,10 +2201,13 @@ else:
     if role == "student":
         student_dashboard()
     elif role == "cr":
-         cr_dashboard()
+        cr_dashboard()
     elif role == "faculty":
         faculty_dashboard()
     elif role == "admin":
         admin_dashboard()
+
+
+
 
 
