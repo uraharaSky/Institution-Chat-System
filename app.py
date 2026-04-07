@@ -1,4 +1,3 @@
-import app
 from flask import Flask
 from flask_cors import CORS
 from extensions import db, bcrypt, jwt
@@ -11,7 +10,7 @@ from routes.auth import auth_bp
 from routes.groups import groups_bp
 from routes.notification import notif_bp
 
-import requests
+
 
 def create_app():
     app = Flask(__name__)
@@ -27,7 +26,7 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     bcrypt.init_app(app)
-    CORS(app)
+    CORS(app, resources={r"/*": {"origins": "*"}})
 
     # Register Blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -59,4 +58,4 @@ with app.app_context():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    app.run()
