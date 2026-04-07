@@ -14,7 +14,7 @@ An institutional communication system built with Flask, enabling secure messagin
 
 ## 🚀 Live Demo  
 
-👉 **Live Link:**  
+👉 **Live Link: https://uniconnect.streamlit.app/**  
 
 ---
 
