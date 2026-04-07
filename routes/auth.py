@@ -51,6 +51,8 @@ def register():
         print("User object:", new_user.name, new_user.email, new_user.role)
         print("✅ User committed:", new_user.id)
 
+        return jsonify({"msg": "User created successfully"}), 201  # ✅ ADD THIS
+
     except Exception as e:
         db.session.rollback()
         print("❌ ERROR:", e)
