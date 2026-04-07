@@ -2,8 +2,8 @@ import streamlit as st
 import requests
 
 # ---------------- CONFIG ----------------
-BASE_URL = "http://127.0.0.1:5000/api"
-BASE_URL_Chat = "http://127.0.0.1:5000"
+BASE_URL = "https://uniconnect-institution-chat-system.onrender.com/api"
+BASE_URL_Chat = "https://uniconnect-institution-chat-system.onrender.com"
 
 st.set_page_config(
     page_title="Institution Chat System",
