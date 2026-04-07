@@ -1,6 +1,6 @@
 import app
 from flask import Flask
-from flask import cors
+from flask_cors import CORS
 from extensions import db, bcrypt, jwt
 from routes.attendance import attendance_bp
 from routes.chats import chat_bp
@@ -27,7 +27,7 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     bcrypt.init_app(app)
-    cors(app)
+    CORS(app)
 
     # Register Blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
