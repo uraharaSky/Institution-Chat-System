@@ -1,3 +1,4 @@
+from models import *
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -49,7 +50,7 @@ def create_app():
         print("RAW DATABASE_URL:", os.environ.get("DATABASE_URL"))
         print("FINAL URI:", app.config["SQLALCHEMY_DATABASE_URI"])
 
-        from models import *
+
 
         print("Creating tables...")
         db.create_all()
