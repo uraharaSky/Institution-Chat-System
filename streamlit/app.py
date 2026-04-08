@@ -435,7 +435,6 @@ def student_dashboard():
         st.session_state.setdefault("chat_user", None)
         st.session_state.setdefault("active_group", None)
         st.session_state.setdefault("just_sent", False)
-        st.session_state.setdefault("just_sent", False)
         st.session_state.setdefault("chat_input", "")
         st.session_state.setdefault("creating_group", False)
         st.session_state.setdefault("auto_refresh", True)
@@ -449,6 +448,10 @@ def student_dashboard():
         # 📂 LEFT PANEL (Chats List)
         # =========================
         with col1:
+            if "messages" not in st.session_state:
+                st.session_state.messages = []
+            if "last_fetch" not in st.session_state:
+                st.session_state.last_fetch = 0
 
             st.write("### 💬 Chats")
 
@@ -616,19 +619,38 @@ def student_dashboard():
                         msg = st.text_input("Type message")
 
                         submitted = st.form_submit_button("Send")
+                        new_msg = {
+                            "sender_id": int(st.session_state["user_id"]),
+                            "content": msg,
+                            "timestamp": "now"
+                        }
 
-                        if submitted and msg.strip():
+                        st.session_state.messages.append(new_msg)
 
+                        try:
                             requests.post(
-                                f"{BASE_URL_Chat}/groups/send",
+                                f"{BASE_URL_Chat}/chat/send",
                                 json={
-                                    "group_id": chat_data["id"],
+                                    "receiver_id": chat_data["id"],
                                     "content": msg
                                 },
-                                headers=headers
-                            )
+                                headers=headers,
+                                timeout = 3)
+                        except:
+                            st.warning("message syncing....")
 
-                            st.session_state["just_sent"] = True
+                        # if submitted and msg.strip():
+                        #
+                        #     requests.post(
+                        #         f"{BASE_URL_Chat}/groups/send",
+                        #         json={
+                        #             "group_id": chat_data["id"],
+                        #             "content": msg
+                        #         },
+                        #         headers=headers
+                        #     )
+                        #
+                        #     st.session_state["just_sent"] = True
                 # =========================
                 # 💬 USER CHAT
                 # =========================
@@ -636,16 +658,30 @@ def student_dashboard():
 
                     st.write(f"## 💬 {chat_data['name']}")
 
-                    res = requests.get(
-                        f"{BASE_URL_Chat}/chat/messages/{chat_data['id']}",
-                        headers=headers
-                    )
+                    import time
 
-                    if res.status_code != 200:
-                        st.error("Failed to load messages")
-                        st.stop()
+                    if "last_fetch" not in st.session_state:
+                        st.session_state.last_fetch = 0
 
-                    messages = res.json()
+                    if time.time() - st.session_state.last_fetch > 2:
+
+                        try:
+                            res = requests.get(
+                                f"{BASE_URL_Chat}/chat/messages/{chat_data['id']}",
+                                headers=headers,
+                                timeout=3
+                            )
+
+                            if res.status_code == 200:
+                                st.session_state.messages = res.json()
+                                st.session_state.last_fetch = time.time()
+
+                        except:
+                            pass
+
+
+
+                    messages = st.session_state.messages
 
                     for msg in messages:
                         is_me = msg["sender_id"] == int(st.session_state["user_id"])
@@ -676,22 +712,38 @@ def student_dashboard():
                     with st.form("user_form", clear_on_submit=True):
                         msg = st.text_input("Type message")
                         if st.form_submit_button("Send") and msg.strip():
+                            new_msg = {
+                                "sender_id": int(st.session_state["user_id"]),
+                                "content": msg,
+                                "timestamp": "now"
+                            }
 
-                            requests.post(
-                                f"{BASE_URL_Chat}/chat/send",
-                                json={
-                                    "receiver_id": chat_data["id"],
-                                    "content": msg
-                                },
-                                headers=headers)
-                            st.session_state["just_sent"] = True
+                            st.session_state.messages.append(new_msg)
+
+                            try:
+                                requests.post(
+                                    f"{BASE_URL_Chat}/chat/send",
+                                    json={
+                                        "receiver_id": chat_data["id"],
+                                        "content": msg
+                                    },
+                                    headers=headers,
+                                    timeout = 3)
+                            except:
+                                st.warning("message syncing....")
+                            # requests.post(
+                            #     f"{BASE_URL_Chat}/chat/send",
+                            #     json={
+                            #         "receiver_id": chat_data["id"],
+                            #         "content": msg
+                            #     },
+                            #     headers=headers)
+                            # st.session_state["just_sent"] = True
 
             else:
                 st.info("Select a chat to start messaging")
 
-            if st.session_state.get("just_sent"):
-                st.session_state["just_sent"] = False
-                st.rerun()
+
     # NOTICES
     elif menu == "Notices":
         res = requests.get(
@@ -1104,17 +1156,36 @@ def cr_dashboard():
                         submitted = st.form_submit_button("Send")
 
                         if submitted and msg.strip():
+                            new_msg = {
+                                "sender_id": int(st.session_state["user_id"]),
+                                "content": msg,
+                                "timestamp": "now"
+                            }
 
+                        st.session_state.messages.append(new_msg)
+
+                        try:
                             requests.post(
-                                f"{BASE_URL_Chat}/groups/send",
+                                f"{BASE_URL_Chat}/chat/send",
                                 json={
-                                    "group_id": chat_data["id"],
+                                    "receiver_id": chat_data["id"],
                                     "content": msg
                                 },
-                                headers=headers
-                            )
+                                headers=headers,
+                                timeout = 3)
+                        except:
+                            st.warning("message syncing....")
 
-                            st.session_state["just_sent"] = True
+                            # requests.post(
+                            #     f"{BASE_URL_Chat}/groups/send",
+                            #     json={
+                            #         "group_id": chat_data["id"],
+                            #         "content": msg
+                            #     },
+                            #     headers=headers
+                            # )
+                            #
+                            # st.session_state["just_sent"] = True
                 # =========================
                 # 💬 USER CHAT
                 # =========================
@@ -1162,15 +1233,34 @@ def cr_dashboard():
                     with st.form("user_form", clear_on_submit=True):
                         msg = st.text_input("Type message")
                         if st.form_submit_button("Send") and msg.strip():
+                            new_msg = {
+                                "sender_id": int(st.session_state["user_id"]),
+                                "content": msg,
+                                "timestamp": "now"
+                            }
 
+                        st.session_state.messages.append(new_msg)
+
+                        try:
                             requests.post(
                                 f"{BASE_URL_Chat}/chat/send",
                                 json={
                                     "receiver_id": chat_data["id"],
                                     "content": msg
                                 },
-                                headers=headers)
-                            st.session_state["just_sent"] = True
+                                headers=headers,
+                                timeout = 3)
+                        except:
+                            st.warning("message syncing....")
+
+                            # requests.post(
+                            #     f"{BASE_URL_Chat}/chat/send",
+                            #     json={
+                            #         "receiver_id": chat_data["id"],
+                            #         "content": msg
+                            #     },
+                            #     headers=headers)
+                            # st.session_state["just_sent"] = True
 
             else:
                 st.info("Select a chat to start messaging")
