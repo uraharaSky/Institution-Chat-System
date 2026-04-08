@@ -44,6 +44,8 @@ def create_app():
 
     with app.app_context():
         print("Engine URL:", db.engine.url)
+        print("creating tables...")
+        db.create_all()
 
     # Register Blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -69,9 +71,9 @@ def create_app():
 
 app = create_app()
 
-# Create DB tables automatically
-with app.app_context():
-    db.create_all()
+# # Create DB tables automatically
+# with app.app_context():
+
 
 
 if __name__ == '__main__':
