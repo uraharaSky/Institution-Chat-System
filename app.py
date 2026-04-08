@@ -1,7 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-
 from extensions import db, bcrypt, jwt
 from routes.attendance import attendance_bp
 from routes.chats import chat_bp
@@ -30,7 +29,6 @@ def create_app():
 
     app.config['SQLALCHEMY_DATABASE_URI'] = uri
     #configuration
-    app.config['SQLALCHEMY_DATABASE_URI'] = uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = 'super-secret-key'
 
@@ -50,6 +48,11 @@ def create_app():
         import os
         print("RAW DATABASE_URL:", os.environ.get("DATABASE_URL"))
         print("FINAL URI:", app.config["SQLALCHEMY_DATABASE_URI"])
+
+        from models import *
+
+        print("Creating tables...")
+        db.create_all()
 
     # Register Blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
