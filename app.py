@@ -43,9 +43,12 @@ def create_app():
     CORS(app, resources={r"/*": {"origins": "*"}})
 
     with app.app_context():
-        print("Engine URL:", db.engine.url)
-        print("creating tables...")
-        db.create_all()
+        # print("Engine URL:", db.engine.url)
+        # print("creating tables...")
+        # db.create_all()
+        import os
+        print("RAW DATABASE_URL:", os.environ.get("DATABASE_URL"))
+        print("FINAL URI:", app.config["SQLALCHEMY_DATABASE_URI"])
 
     # Register Blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
